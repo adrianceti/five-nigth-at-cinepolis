@@ -1,7 +1,5 @@
-#ifndef JUEGO_HPP
-#define JUEGO_HPP
+#pragma once
 
-#include <SFML/Graphics.hpp>
 #include <memory>
 
 class Motor;
@@ -15,5 +13,3 @@ public:
     ~Juego();
     void run();
 };
-
-#endif
