@@ -1,11 +1,11 @@
 #include "../include/Motor.hpp"
 #include <iostream>
 
-Motor::Motor() : spriteOficina(texturaOficina) {
+Motor::Motor() {
     ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
     ventana.setFramerateLimit(60);
-    if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
-        std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
+    if (!texturaOficina.loadFromFile("../assets/textures/oficina.png")) {
+        std::cerr << "Error: No se encontro ../assets/textures/oficina.png" << std::endl;
     } else {
         spriteOficina.setTexture(texturaOficina);
     }
