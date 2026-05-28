@@ -4,10 +4,14 @@
 Motor::Motor() {
     ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
     ventana.setFramerateLimit(60);
-    if (!texturaOficina.loadFromFile("../assets/textures/oficina.png")) {
-        std::cerr << "Error: No se encontro ../assets/textures/oficina.png" << std::endl;
+    std::cout << "Intentando cargar: assets/textures/oficina.png" << std::endl;
+    if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
+        std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
     } else {
-        spriteOficina.setTexture(texturaOficina);
+        std::cout << "Textura cargada exitosamente" << std::endl;
+        std::cout << "Dimensiones de la textura: " << texturaOficina.getSize().x << "x" << texturaOficina.getSize().y << std::endl;
+        spriteOficina.emplace(texturaOficina);
+        std::cout << "Sprite creado" << std::endl;
     }
 }
 
@@ -29,8 +33,9 @@ void Motor::actualizar() {}
 
 void Motor::renderizar() {
     ventana.clear(sf::Color(40, 40, 40));
-    ventana.draw(spriteOficina);
-    
+    if (spriteOficina.has_value()) {
+        ventana.draw(spriteOficina.value());
+    }
     ventana.display();
 }
 

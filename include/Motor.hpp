@@ -1,13 +1,14 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <optional>
 
 class Motor {
 private:
     sf::RenderWindow ventana;
 
     sf::Texture texturaOficina;
-    sf::Sprite spriteOficina;
+    std::optional<sf::Sprite> spriteOficina;
 
     void procesarEventos();
     void actualizar();
