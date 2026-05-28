@@ -1,13 +1,14 @@
-#ifndef MOTOR_HPP
-#define MOTOR_HPP
+#pragma once
 
 #include <SFML/Graphics.hpp>
 
 class Motor {
 private:
     sf::RenderWindow ventana;
+
     sf::Texture texturaOficina;
     sf::Sprite spriteOficina;
+
     void procesarEventos();
     void actualizar();
     void renderizar();
@@ -18,5 +19,3 @@ public:
     void ejecutarCiclo();
     bool estaAbierto() const;
 };
-
-#endif
