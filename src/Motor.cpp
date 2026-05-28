@@ -1,14 +1,13 @@
 #include "../include/Motor.hpp"
 #include <iostream>
 
-// Lista de inicialización obligatoria en SFML 3 para enlazar el sprite con su textura
 Motor::Motor() : spriteOficina(texturaOficina) {
     ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
     ventana.setFramerateLimit(60);
-
-    // Intentamos cargar la imagen de la oficina
     if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
         std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
+    } else {
+        spriteOficina.setTexture(texturaOficina);
     }
 }
 
@@ -29,9 +28,7 @@ void Motor::procesarEventos() {
 void Motor::actualizar() {}
 
 void Motor::renderizar() {
-    ventana.clear(sf::Color::Black);
-    
-    // Dibujamos el sprite directamente de forma segura
+    ventana.clear(sf::Color(40, 40, 40));
     ventana.draw(spriteOficina);
     
     ventana.display();
