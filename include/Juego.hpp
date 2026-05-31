@@ -1,15 +1,22 @@
 #pragma once
 
 #include <memory>
-
-class Motor;
+#include "Motor.hpp"
 
 class Juego {
 private:
     std::unique_ptr<Motor> motor;
 
 public:
-    Juego();
-    ~Juego();
-    void run();
+    Juego() {
+        motor = std::make_unique<Motor>();
+    }
+
+    ~Juego() {}
+
+    void run() {
+        while (motor->estaAbierto()) {
+            motor->ejecutarCiclo();
+        }
+    }
 };
