@@ -1,6 +1,9 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <string>
+#include <random>
+#include <cstdlib>
 
 // Enumerado para las distintas zonas de Cinépolis
 enum class TipoCamara {
@@ -14,16 +17,37 @@ enum class TipoCamara {
 class MonitorCamaras {
 private:
     TipoCamara camaraActual;
-    sf::RectangleShape cajaMapa; // Contenedor temporal para simular el mapa en pantalla
+    sf::RectangleShape cajaMapa;
+    mutable std::mt19937 generadorAleatorio;
+    mutable std::uniform_int_distribution<int> distribucionEstadistica;
+
+    void generarEstatica() const {
+        // Genera estática visual en la terminal (simulación de ruido de cámara)
+        for (int y = 0; y < 12; y++) {
+            std::string fila;
+            for (int x = 0; x < 60; x++) {
+                int caracter = distribucionEstadistica(generadorAleatorio);
+                if (caracter < 30) fila += " ";
+                else if (caracter < 60) fila += ".";
+                else if (caracter < 80) fila += ":";
+                else if (caracter < 95) fila += "#";
+                else fila += "@";
+            }
+            std::cout << "║ " << fila << " ║\n";
+        }
+    }
 
 public:
-    MonitorCamaras() : camaraActual(TipoCamara::CAM_01_DULCERIA) {
-        // Creamos un rectángulo simple que representará el mapa en la esquina
-        cajaMapa.setSize(sf::Vector2f(300.f, 400.f));
-        cajaMapa.setFillColor(sf::Color(20, 20, 20, 200)); // Gris semi-transparente
-        cajaMapa.setOutlineColor(sf::Color::Green);
-        cajaMapa.setOutlineThickness(2.f);
-        cajaMapa.setPosition(sf::Vector2f(900.f, 200.f)); // Esquina derecha de la pantalla
+    MonitorCamaras() 
+        : camaraActual(TipoCamara::CAM_01_DULCERIA),
+          generadorAleatorio(std::random_device{}()),
+          distribucionEstadistica(0, 100) {
+        // Creamos un rectángulo con marco verde retro
+        cajaMapa.setSize(sf::Vector2f(380.f, 520.f));
+        cajaMapa.setFillColor(sf::Color(10, 40, 10, 230)); // Verde oscuro semi-transparente
+        cajaMapa.setOutlineColor(sf::Color(0, 255, 0));
+        cajaMapa.setOutlineThickness(3.f);
+        cajaMapa.setPosition(sf::Vector2f(850.f, 90.f)); // Esquina derecha de la pantalla
     }
 
     void cambiarCamara(TipoCamara nuevaCamara) {
@@ -49,5 +73,41 @@ public:
     // Dibuja la interfaz del monitor sobre la ventana
     void renderizar(sf::RenderWindow& ventana) {
         ventana.draw(cajaMapa);
+        
+        // Dibuja líneas horizontales (efecto de scanlines)
+        for (float y = 110.0f; y < 600.0f; y += 20.0f) {
+            sf::RectangleShape linea({360.0f, 1.0f});
+            linea.setPosition({860.0f, y});
+            linea.setFillColor(sf::Color(0, 100, 0));
+            ventana.draw(linea);
+        }
+    }
+
+    // Muestra la estática y la información en la terminal de Windows
+    void mostrarEnTerminal() const {
+        #ifdef _WIN32
+            std::system("cls");
+        #else
+            std::system("clear");
+        #endif
+
+        std::cout << "\n";
+        std::cout << "╔════════════════════════════════════════════════════════════════╗\n";
+        std::cout << "║          SISTEMA DE VIGILANCIA POR CAMARA - CINEPOLIS          ║\n";
+        std::cout << "║                                                                ║\n";
+        std::cout << "║  >>> TRANSMISION ACTIVA: " << getNombreCamaraActual() << "\n";
+        std::cout << "║                                                                ║\n";
+        std::cout << "╠════════════════════════════════════════════════════════════════╣\n";
+        
+        // Genera estática
+        generarEstatica();
+        
+        std::cout << "╠════════════════════════════════════════════════════════════════╣\n";
+        std::cout << "║ CANALES DISPONIBLES:                                           ║\n";
+        std::cout << "║ [1] DULCERIA    [2] PASILLO A   [3] PASILLO B                  ║\n";
+        std::cout << "║ [4] SALAS       [5] BANOS                                       ║\n";
+        std::cout << "║                                                                ║\n";
+        std::cout << "║ [ESPACIO] Cerrar Monitor - Volver a Oficina                    ║\n";
+        std::cout << "╚════════════════════════════════════════════════════════════════╝\n";
     }
 };

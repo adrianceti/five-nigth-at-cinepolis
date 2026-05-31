@@ -4,6 +4,7 @@
 #include <optional>
 #include <iostream>
 #include "Guardia.hpp"
+#include "MonitorCamaras.hpp" // Nueva inclusión con el nombre corregido
 
 class Motor {
 private:
@@ -12,13 +13,15 @@ private:
     sf::Texture texturaOficina;
     std::optional<sf::Sprite> spriteOficina;
 
-    // --- NUEVO: Control de Cámara (Vista) ---
+    // --- Control de Cámara (Vista) ---
     sf::View vistaOficina;
+    sf::View vistaInterfaz; // NUEVO: Cámara estática para que el HUD no se mueva al girar la oficina
     float posicionCamaraX;
     float velocidadCamara;
 
-    // Instancia del jugador y los relojes de control
+    // Instancia del jugador, el monitor y los relojes de control
     Guardia jugador;
+    MonitorCamaras monitor; // NUEVO: Instancia del sistema de cámaras
     sf::Clock relojEnergia;
     sf::Clock relojTerminal;
 
@@ -36,6 +39,20 @@ private:
                 if (botonPresionado->code == sf::Keyboard::Key::D) {
                     jugador.alternarPuertaDerecha();
                 }
+                
+                // NUEVO: Abrir/Cerrar monitor con la Barra Espaciadora
+                if (botonPresionado->code == sf::Keyboard::Key::Space) {
+                    jugador.alternarMonitor();
+                }
+
+                // NUEVO: Cambiar canales de cámara con números del 1 al 5 si el monitor está abierto
+                if (jugador.esMonitorAbierto()) {
+                    if (botonPresionado->code == sf::Keyboard::Key::Num1) monitor.cambiarCamara(TipoCamara::CAM_01_DULCERIA);
+                    if (botonPresionado->code == sf::Keyboard::Key::Num2) monitor.cambiarCamara(TipoCamara::CAM_02_PASILLO_A);
+                    if (botonPresionado->code == sf::Keyboard::Key::Num3) monitor.cambiarCamara(TipoCamara::CAM_03_PASILLO_B);
+                    if (botonPresionado->code == sf::Keyboard::Key::Num4) monitor.cambiarCamara(TipoCamara::CAM_04_SALAS);
+                    if (botonPresionado->code == sf::Keyboard::Key::Num5) monitor.cambiarCamara(TipoCamara::CAM_05_BANOS);
+                }
             }
         }
     }
@@ -44,32 +61,63 @@ private:
         float dt = relojEnergia.restart().asSeconds();
         jugador.bajarEnergia(dt);
 
-        // --- LÓGICA DE MOVIMIENTO DE CÁMARA CON EL MOUSE ---
-        sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
-        
-        // Solo movemos la cámara si el mouse está dentro de los límites de la ventana
-        if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
-            // Si el mouse está en el extremo derecho, la cámara va a la derecha
-            if (posicionMouse.x > 1000) {
-                posicionCamaraX += velocidadCamara * dt;
-            }
-            // Si el mouse está en el extremo izquierdo, la cámara va a la izquierda
-            else if (posicionMouse.x < 280) {
-                posicionCamaraX -= velocidadCamara * dt;
-            }
+        // MODIFICACIÓN: El mouse solo mueve la cámara si el monitor está CERRADO
+        if (!jugador.esMonitorAbierto()) {
+            sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
+            
+            if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
+                if (posicionMouse.x > 1000) {
+                    posicionCamaraX += velocidadCamara * dt;
+                }
+                else if (posicionMouse.x < 280) {
+                    posicionCamaraX -= velocidadCamara * dt;
+                }
 
-            // Límites para que la cámara no muestre el vacío
-            if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
-            if (posicionCamaraX > 960.0f) posicionCamaraX = 960.0f;
+                if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
+                if (posicionCamaraX > 960.0f) posicionCamaraX = 960.0f;
 
-            // Aplicamos la nueva posición al centro de la cámara
-            vistaOficina.setCenter({posicionCamaraX, 360.0f});
+                vistaOficina.setCenter({posicionCamaraX, 360.0f});
+            }
         }
 
-        // Efecto visual de apagón
+        // --- NUEVO: MONITOR DE TELEMETRÍA EN TERMINAL CONTROLADO ---
+        if (relojTerminal.getElapsedTime().asSeconds() >= 0.1f) {
+            if (jugador.esMonitorAbierto()) {
+                // Si el monitor está abierto, mostramos la estática y la información del monitor
+                monitor.mostrarEnTerminal();
+            } else {
+                // Si el monitor está cerrado, mostramos el HUD de la oficina
+                #ifdef _WIN32
+                    std::system("cls");
+                #else
+                    std::system("clear");
+                #endif
+
+                std::cout << "=========================================\n";
+                std::cout << "     SISTEMA DE SEGURIDAD - CINEPOLIS    \n";
+                std::cout << "=========================================\n";
+                std::cout << " ENERGIA RESTANTE : " << static_cast<int>(jugador.getEnergia()) << "%\n";
+                std::cout << " NIVEL DE CONSUMO : [ " << jugador.getNivelConsumo() << " ] ";
+                for (int i = 0; i < jugador.getNivelConsumo(); i++) std::cout << "Z";
+                std::cout << "\n-----------------------------------------\n";
+                std::cout << " PUERTA IZQUIERDA : " << (jugador.esPuertaIzquierdaCerrada() ? "[X] CERRADA" : "[ ] ABIERTA") << "\n";
+                std::cout << " PUERTA DERECHA   : " << (jugador.esPuertaDerechaCerrada() ? "[X] CERRADA" : "[ ] ABIERTA") << "\n";
+                std::cout << "-----------------------------------------\n";
+                std::cout << " STATUS MONITOR   : [PANTALLA APAGADA]\n";
+                std::cout << " VISTA ACTUAL     : Oficina Principal\n";
+                std::cout << "=========================================\n";
+                std::cout << " Controles: 'A' Puerta Izq | 'D' Puerta Der | 'ESPACIO' Monitor\n";
+            }
+
+            relojTerminal.restart();
+        }
+
+        // Efecto visual de apagón o estática de cámaras
         if (spriteOficina.has_value()) {
             if (jugador.getEnergia() <= 0.0f) {
                 spriteOficina.value().setColor(sf::Color(10, 10, 30)); 
+            } else if (jugador.esMonitorAbierto()) {
+                spriteOficina.value().setColor(sf::Color(40, 60, 40)); // Filtro verde de visión nocturna
             } else {
                 spriteOficina.value().setColor(sf::Color::White);
             }
@@ -79,11 +127,16 @@ private:
     void renderizar() {
         ventana.clear(sf::Color(40, 40, 40));
         
-        // Asignamos la vista de la oficina antes de dibujar para que se mueva
+        // 1. Dibujamos la oficina usando su cámara con desplazamiento
         ventana.setView(vistaOficina);
-        
         if (spriteOficina.has_value()) {
             ventana.draw(spriteOficina.value());
+        }
+        
+        // 2. NUEVO: Si el monitor está abierto, cambiamos a la vista fija y superponemos el mapa
+        if (jugador.esMonitorAbierto()) {
+            ventana.setView(vistaInterfaz); 
+            monitor.renderizar(ventana);
         }
         
         ventana.display();
@@ -94,11 +147,15 @@ public:
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
         
-        // Inicializamos la vista en el centro estándar (1280 / 2 = 640, 720 / 2 = 360)
+        // Inicializamos la vista móvil
         posicionCamaraX = 640.0f;
-        velocidadCamara = 400.0f; // Píxeles por segundo que se desplazará la vista
+        velocidadCamara = 400.0f; 
         vistaOficina.setSize({1280.0f, 720.0f});
         vistaOficina.setCenter({posicionCamaraX, 360.0f});
+
+        // NUEVO: Inicializamos la vista fija de interfaz
+        vistaInterfaz.setSize({1280.0f, 720.0f});
+        vistaInterfaz.setCenter({640.0f, 360.0f});
 
         if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
             std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
