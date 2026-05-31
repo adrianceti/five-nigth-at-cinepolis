@@ -12,10 +12,15 @@ private:
     sf::Texture texturaOficina;
     std::optional<sf::Sprite> spriteOficina;
 
+    // --- NUEVO: Control de Cámara (Vista) ---
+    sf::View vistaOficina;
+    float posicionCamaraX;
+    float velocidadCamara;
+
     // Instancia del jugador y los relojes de control
     Guardia jugador;
     sf::Clock relojEnergia;
-    sf::Clock relojTerminal; // Controla la velocidad de refresco de la consola
+    sf::Clock relojTerminal;
 
     void procesarEventos() {
         while (const std::optional<sf::Event> evento = ventana.pollEvent()) {
@@ -32,22 +37,6 @@ private:
                     jugador.alternarPuertaDerecha();
                 }
             }
-
-            // --- CONTROL POR MOUSE ---
-            if (const auto* clickMouse = evento->getIf<sf::Event::MouseButtonPressed>()) {
-                if (clickMouse->button == sf::Mouse::Button::Left) {
-                    sf::Vector2i posicionMouse = clickMouse->position;
-
-                    // Zona izquierda (Mapeo de clicks en borde de pantalla)
-                    if (posicionMouse.x >= 0 && posicionMouse.x <= 150) {
-                        jugador.alternarPuertaIzquierda();
-                    }
-                    // Zona derecha
-                    else if (posicionMouse.x >= 1130 && posicionMouse.x <= 1280) {
-                        jugador.alternarPuertaDerecha();
-                    }
-                }
-            }
         }
     }
 
@@ -55,32 +44,29 @@ private:
         float dt = relojEnergia.restart().asSeconds();
         jugador.bajarEnergia(dt);
 
-        // REFRESO DE TERMINAL CONTROLADO: Solo imprime cada 100 milisegundos
-        if (relojTerminal.getElapsedTime().asSeconds() >= 0.1f) {
-            // Limpia la terminal de forma estándar en Windows/Linux
-#ifdef _WIN32
-            std::system("cls");
-#else
-            std::system("clear");
-#endif
+        // --- LÓGICA DE MOVIMIENTO DE CÁMARA CON EL MOUSE ---
+        sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
+        
+        // Solo movemos la cámara si el mouse está dentro de los límites de la ventana
+        if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
+            // Si el mouse está en el extremo derecho, la cámara va a la derecha
+            if (posicionMouse.x > 1000) {
+                posicionCamaraX += velocidadCamara * dt;
+            }
+            // Si el mouse está en el extremo izquierdo, la cámara va a la izquierda
+            else if (posicionMouse.x < 280) {
+                posicionCamaraX -= velocidadCamara * dt;
+            }
 
-            std::cout << "=========================================\n";
-            std::cout << "     SISTEMA DE SEGURIDAD - CINEPOLIS    \n";
-            std::cout << "=========================================\n";
-            std::cout << " ENERGIA RESTANTE : " << static_cast<int>(jugador.getEnergia()) << "%\n";
-            std::cout << " NIVEL DE CONSUMO : [ " << jugador.getNivelConsumo() << " ] ";
-            
-            for (int i = 0; i < jugador.getNivelConsumo(); i++) std::cout << "Z"; // Carácter simple para telemetría
-            std::cout << "\n-----------------------------------------\n";
-            std::cout << " PUERTA IZQUIERDA : " << (jugador.esPuertaIzquierdaCerrada() ? "[X] CERRADA" : "[ ] ABIERTA") << "\n";
-            std::cout << " PUERTA DERECHA   : " << (jugador.esPuertaDerechaCerrada() ? "[X] CERRADA" : "[ ] ABIERTA") << "\n";
-            std::cout << "=========================================\n";
-            std::cout << " Instrucciones: Presiona 'A' o 'D' con la ventana activa.\n";
+            // Límites para que la cámara no muestre el vacío
+            if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
+            if (posicionCamaraX > 960.0f) posicionCamaraX = 960.0f;
 
-            relojTerminal.restart();
+            // Aplicamos la nueva posición al centro de la cámara
+            vistaOficina.setCenter({posicionCamaraX, 360.0f});
         }
 
-        // Efecto visual de apagón en la ventana gráfica
+        // Efecto visual de apagón
         if (spriteOficina.has_value()) {
             if (jugador.getEnergia() <= 0.0f) {
                 spriteOficina.value().setColor(sf::Color(10, 10, 30)); 
@@ -92,9 +78,14 @@ private:
 
     void renderizar() {
         ventana.clear(sf::Color(40, 40, 40));
+        
+        // Asignamos la vista de la oficina antes de dibujar para que se mueva
+        ventana.setView(vistaOficina);
+        
         if (spriteOficina.has_value()) {
             ventana.draw(spriteOficina.value());
         }
+        
         ventana.display();
     }
 
@@ -103,6 +94,12 @@ public:
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
         
+        // Inicializamos la vista en el centro estándar (1280 / 2 = 640, 720 / 2 = 360)
+        posicionCamaraX = 640.0f;
+        velocidadCamara = 400.0f; // Píxeles por segundo que se desplazará la vista
+        vistaOficina.setSize({1280.0f, 720.0f});
+        vistaOficina.setCenter({posicionCamaraX, 360.0f});
+
         if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
             std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
         } else {
