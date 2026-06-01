@@ -21,9 +21,14 @@ private:
     float posicionCamaraX;
     float velocidadCamara;
 
-    // Componentes Visuales de las Puertas
+    // Componentes Visuales de las Puertas (Ajustadas al centro)
     sf::RectangleShape visualPuertaIzquierda;
     sf::RectangleShape visualPuertaDerecha;
+
+    // --- NUEVO: Indicadores Gráficos de HUD (Sin necesidad de Fuentes/Fonts) ---
+    sf::RectangleShape barraEnergiaFondo;
+    sf::RectangleShape barraEnergiaFrente;
+    sf::RectangleShape bloquesConsumo[4]; // Hasta 4 niveles de consumo visual
 
     // Entidades del juego
     Guardia jugador;
@@ -34,13 +39,13 @@ private:
     sf::Clock relojEnergia;
     sf::Clock relojTerminal;
     
-    // --- NUEVO: Control del Tiempo y Victoria ---
+    // Control del Tiempo y Victoria
     sf::Clock relojNoche;
-    int horaActual;             // De 12 (Medianoche) a 6 AM
-    float tiempoPorHora;        // Cuántos segundos reales equivalen a 1 hora de juego (60 segundos)
-    float acumuladorHora;       // Rastrea el tiempo transcurrido para la siguiente hora
+    int horaActual;             
+    float tiempoPorHora;        
+    float acumuladorHora;       
     bool juegoTerminado;
-    bool victoria;              // true si se llega a las 6 AM
+    bool victoria;              
     float tiempoMuerteAcumulado;
 
     void procesarEventos() {
@@ -49,10 +54,8 @@ private:
                 ventana.close();
             }
 
-            // Si la partida acabó (por ganar o perder), se congelan los controles
             if (juegoTerminado || victoria) return;
 
-            // --- CONTROL POR TECLADO ---
             if (const auto* botonPresionado = evento->getIf<sf::Event::KeyPressed>()) {
                 if (botonPresionado->code == sf::Keyboard::Key::A) {
                     jugador.alternarPuertaIzquierda();
@@ -79,26 +82,21 @@ private:
     void actualizar() {
         float dt = relojEnergia.restart().asSeconds();
 
-        // Lógica de salida tras terminar el juego (tanto derrota como victoria)
         if (juegoTerminado || victoria) {
             tiempoMuerteAcumulado += dt;
-            if (tiempoMuerteAcumulado >= 5.0f) { // 5 segundos de pantalla final
+            if (tiempoMuerteAcumulado >= 5.0f) { 
                 ventana.close();
             }
             return; 
         }
 
-        // --- LÓGICA DEL TIEMPO DE LA NOCHE ---
+        // Lógica del Tiempo de la Noche
         acumuladorHora += dt;
         if (acumuladorHora >= tiempoPorHora) {
             acumuladorHora = 0.0f;
-            if (horaActual == 12) {
-                horaActual = 1;
-            } else {
-                horaActual++;
-            }
+            if (horaActual == 12) horaActual = 1;
+            else horaActual++;
 
-            // CONDICIÓN DE VICTORIA: Si das las 6 AM, ganas la noche
             if (horaActual == 6) {
                 victoria = true;
                 tiempoMuerteAcumulado = 0.0f;
@@ -107,63 +105,54 @@ private:
         }
 
         jugador.bajarEnergia(dt);
-
-        // Lógica de IA de Gobo
         gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
 
-        // CONDICIÓN DE DERROTA
         if (gobo.esEstaAdentro()) {
             juegoTerminado = true;
             tiempoMuerteAcumulado = 0.0f;
             return;
         }
 
-        // El mouse mueve la oficina
+        // --- ACTUALIZAR HUD GRÁFICO ---
+        // Redimensionar la barra verde de energía según el porcentaje restante (0 a 250 píxeles de ancho)
+        float porcentajeEnergia = jugador.getEnergia() / 100.0f;
+        if (porcentajeEnergia < 0.0f) porcentajeEnergia = 0.0f;
+        barraEnergiaFrente.setSize(sf::Vector2f(250.0f * porcentajeEnergia, 20.0f));
+
+        // Cambiar color de la barra si le queda poca batería
+        if (jugador.getEnergia() < 25.0f) {
+            barraEnergiaFrente.setFillColor(sf::Color::Red);
+        } else {
+            barraEnergiaFrente.setFillColor(sf::Color::Green);
+        }
+
+        // El mouse mueve la oficina panorámica
         if (!jugador.esMonitorAbierto()) {
             sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
             
             if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
-                if (posicionMouse.x > 1000) posicionCamaraX += velocidadCamara * dt;
-                else if (posicionMouse.x < 280) posicionCamaraX -= velocidadCamara * dt;
+                if (posicionMouse.x > 1050) posicionCamaraX += velocidadCamara * dt;
+                else if (posicionMouse.x < 230) posicionCamaraX -= velocidadCamara * dt;
 
+                // Límites de paneo extendidos para que recorras toda tu imagen de fondo
                 if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
-                if (posicionCamaraX > 960.0f) posicionCamaraX = 960.0f;
+                if (posicionCamaraX > 1100.0f) posicionCamaraX = 1100.0f; 
 
                 vistaOficina.setCenter({posicionCamaraX, 360.0f});
             }
         }
 
-        // --- MONITOR DE TELEMETRÍA EN TERMINAL ---
         if (relojTerminal.getElapsedTime().asSeconds() >= 0.1f) {
-            if (jugador.esMonitorAbierto()) {
-                monitor.mostrarEnTerminal();
-            } else {
-                #ifdef _WIN32
-                    std::system("cls");
-                #else
-                    std::system("clear");
-                #endif
-
-                std::cout << "=========================================\n";
-                std::cout << "     SISTEMA DE SEGURIDAD - CINEPOLIS    \n";
-                std::cout << "=========================================\n";
-                // Mostramos la hora en la esquina superior de la consola
-                std::cout << " HORA ACTUAL      : " << horaActual << " AM\n";
-                std::cout << " ENERGIA RESTANTE : " << static_cast<int>(jugador.getEnergia()) << "%\n";
-                std::cout << " NIVEL DE CONSUMO : [ " << jugador.getNivelConsumo() << " ] ";
-                for (int i = 0; i < jugador.getNivelConsumo(); i++) std::cout << "Z";
-                std::cout << "\n-----------------------------------------\n";
-                std::cout << " PUERTA IZQUIERDA : " << (jugador.esPuertaIzquierdaCerrada() ? "[X] CERRADA" : "[ ] ABIERTA") << "\n";
-                std::cout << " PUERTA DERECHA   : " << (jugador.esPuertaDerechaCerrada() ? "[X] CERRADA" : "[ ] ABIERTA") << "\n";
-                std::cout << "-----------------------------------------\n";
-                
-                if (gobo.esEnLaPuerta()) {
-                    std::cout << " ALERTA CRITICA   : [!] ALGUIEN EN LA PUERTA IZQUIERDA\n";
-                } else {
-                    std::cout << " STATUS MONITOR   : [PANTALLA APAGADA]\n";
-                }
-                std::cout << "=========================================\n";
-            }
+            // Mantenemos las lecturas exactas en consola para que veas la hora exacta (1 AM, 2 AM...)
+            #ifdef _WIN32
+                std::system("cls");
+            #else
+                std::system("clear");
+            #endif
+            std::cout << "=========================================\n";
+            std::cout << "  RELOJ DE LA NOCHE : " << horaActual << " AM \n";
+            std::cout << "  ENERGIA RESTANTE  : " << static_cast<int>(jugador.getEnergia()) << "%\n";
+            std::cout << "=========================================\n";
             relojTerminal.restart();
         }
 
@@ -171,7 +160,7 @@ private:
             if (jugador.getEnergia() <= 0.0f) {
                 spriteOficina.value().setColor(sf::Color(10, 10, 30)); 
             } else if (gobo.esEnLaPuerta()) {
-                spriteOficina.value().setColor(sf::Color(255, 150, 150)); 
+                spriteOficina.value().setColor(sf::Color(255, 180, 180)); 
             } else {
                 spriteOficina.value().setColor(sf::Color::White);
             }
@@ -179,41 +168,14 @@ private:
     }
 
     void renderizar() {
-        // PANTALLA DE VICTORIA (6 AM)
         if (victoria) {
-            ventana.clear(sf::Color(10, 40, 10)); // Fondo verde oscuro celebratorio
-            
-            #ifdef _WIN32
-                std::system("cls");
-            #else
-                std::system("clear");
-            #endif
-            std::cout << "=========================================\n";
-            std::cout << "         ¡ 6 : 0 0   A M !               \n";
-            std::cout << "=========================================\n\n";
-            std::cout << "   SOBREVIVISTE LA NOCHE EN CINEPOLIS... \n";
-            std::cout << "   Tu turno ha terminado con exito.     \n\n";
-            std::cout << "=========================================\n";
-            
+            ventana.clear(sf::Color(20, 80, 20)); // Pantalla verde de victoria
             ventana.display();
             return;
         }
 
-        // PANTALLA DE DERROTA
         if (juegoTerminado) {
-            ventana.clear(sf::Color::Black);
-            
-            #ifdef _WIN32
-                std::system("cls");
-            #else
-                std::system("clear");
-            #endif
-            std::cout << "#########################################\n";
-            std::cout << "           G A M E   O V E R             \n";
-            std::cout << "#########################################\n\n";
-            std::cout << "   " << gobo.getNombre() << " TE ATACÓ EN LA OFICINA...\n";
-            std::cout << "#########################################\n";
-            
+            ventana.clear(sf::Color::Red); // Pantalla roja de Jumpscare/Game Over
             ventana.display();
             return;
         }
@@ -222,15 +184,17 @@ private:
             int tonoVerde = 30 + static_cast<int>(monitor.getCamaraActual()) * 15;
             ventana.clear(sf::Color(10, tonoVerde, 15)); 
         } else {
-            ventana.clear(sf::Color(40, 40, 40));
+            ventana.clear(sf::Color::Black);
         }
         
+        // 1. DIBUJAR ENTORNO (Se mueve con la cámara)
         ventana.setView(vistaOficina);
         if (!jugador.esMonitorAbierto()) {
             if (spriteOficina.has_value()) {
                 ventana.draw(spriteOficina.value());
             }
 
+            // CORREGIDO: Las puertas ahora aparecen directamente en las entradas laterales visibles
             if (jugador.esPuertaIzquierdaCerrada()) {
                 ventana.draw(visualPuertaIzquierda);
             }
@@ -239,19 +203,28 @@ private:
             }
         }
         
+        // 2. DIBUJAR INTERFAZ (Fija en la pantalla)
+        ventana.setView(vistaInterfaz); 
         if (jugador.esMonitorAbierto()) {
-            ventana.setView(vistaInterfaz); 
             monitor.renderizar(ventana);
+        } else {
+            // Dibujar la barra de batería gráfica en la esquina inferior izquierda
+            ventana.draw(barraEnergiaFondo);
+            ventana.draw(barraEnergiaFrente);
+
+            // Dibujar los bloques indicadores de consumo
+            for (int i = 0; i < jugador.getNivelConsumo() && i < 4; i++) {
+                ventana.draw(bloquesConsumo[i]);
+            }
         }
         
         ventana.display();
     }
 
 public:
-    // Configuración inicial de las variables del tiempo
     Motor() : gobo("Gobo", 12), 
               horaActual(12), 
-              tiempoPorHora(15.0f),  // NOTA: Cambiado a 15 segundos por hora para testear rápido (Noche de 1.5 minutos)
+              tiempoPorHora(15.0f),  
               acumuladorHora(0.0f), 
               juegoTerminado(false), 
               victoria(false), 
@@ -262,25 +235,54 @@ public:
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
         
+        // Configuración inicial de posición de vista para abarcar el fondo panorámico
         posicionCamaraX = 640.0f;
-        velocidadCamara = 400.0f; 
+        velocidadCamara = 550.0f; // Un poco más rápido el paneo
         vistaOficina.setSize({1280.0f, 720.0f});
         vistaOficina.setCenter({posicionCamaraX, 360.0f});
 
         vistaInterfaz.setSize({1280.0f, 720.0f});
         vistaInterfaz.setCenter({640.0f, 360.0f});
 
-        visualPuertaIzquierda.setSize(sf::Vector2f(120.0f, 600.0f));
-        visualPuertaIzquierda.setFillColor(sf::Color(80, 85, 95));
-        visualPuertaIzquierda.setOutlineColor(sf::Color::Black);
-        visualPuertaIzquierda.setOutlineThickness(4.0f);
-        visualPuertaIzquierda.setPosition(sf::Vector2f(100.0f, 60.0f));
+        // --- CONFIGURACIÓN DE BARRAS HUD (SIN FUENTES) ---
+        // Fondo de la barra de energía (Borde gris vacío)
+        barraEnergiaFondo.setSize(sf::Vector2f(250.0f, 20.0f));
+        barraEnergiaFondo.setFillColor(sf::Color(50, 50, 50));
+        barraEnergiaFondo.setOutlineColor(sf::Color::White);
+        barraEnergiaFondo.setOutlineThickness(2.0f);
+        barraEnergiaFondo.setPosition(sf::Vector2f(40.0f, 650.0f));
 
-        visualPuertaDerecha.setSize(sf::Vector2f(120.0f, 600.0f));
-        visualPuertaDerecha.setFillColor(sf::Color(80, 85, 95));
-        visualPuertaDerecha.setOutlineColor(sf::Color::Black);
+        // Frente de la barra (Relleno dinámico verde)
+        barraEnergiaFrente.setSize(sf::Vector2f(250.0f, 20.0f));
+        barraEnergiaFrente.setFillColor(sf::Color::Green);
+        barraEnergiaFrente.setPosition(sf::Vector2f(40.0f, 650.0f));
+
+        // Inicializar los 4 bloques indicadores de consumo de energía justo al lado
+        for (int i = 0; i < 4; i++) {
+            bloquesConsumo[i].setSize(sf::Vector2f(15.0f, 20.0f));
+            bloquesConsumo[i].setFillColor(sf::Color::Yellow);
+            bloquesConsumo[i].setOutlineColor(sf::Color::Black);
+            bloquesConsumo[i].setOutlineThickness(1.0f);
+            bloquesConsumo[i].setPosition(sf::Vector2f(310.0f + (i * 20.0f), 650.0f));
+        }
+
+        // --- COORDENADAS AJUSTADAS DE LAS PUERTAS ---
+        // Ahora las colocamos en los extremos del rango de la pantalla para que las veas caer
+        // al arrastrar el mouse por completo a la izquierda o derecha de tu consola de control.
+        
+        // Puertas Izquierda (Caerá en el extremo izquierdo de la oficina)
+        visualPuertaIzquierda.setSize(sf::Vector2f(260.0f, 680.0f));
+        visualPuertaIzquierda.setFillColor(sf::Color(35, 35, 40, 245)); // Metal oscuro grueso
+        visualPuertaIzquierda.setOutlineColor(sf::Color(100, 100, 100));
+        visualPuertaIzquierda.setOutlineThickness(4.0f);
+        visualPuertaIzquierda.setPosition(sf::Vector2f(60.0f, 20.0f)); 
+
+        // Puerta Derecha (Aparecerá al desplazar la mirada hacia los pósters de la derecha)
+        visualPuertaDerecha.setSize(sf::Vector2f(260.0f, 680.0f));
+        visualPuertaDerecha.setFillColor(sf::Color(35, 35, 40, 245));
+        visualPuertaDerecha.setOutlineColor(sf::Color(100, 100, 100));
         visualPuertaDerecha.setOutlineThickness(4.0f);
-        visualPuertaDerecha.setPosition(sf::Vector2f(1380.0f, 60.0f));
+        visualPuertaDerecha.setPosition(sf::Vector2f(1340.0f, 20.0f)); 
 
         if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
             std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
