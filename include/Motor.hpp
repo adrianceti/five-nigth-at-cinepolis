@@ -33,9 +33,14 @@ private:
     // Relojes de control
     sf::Clock relojEnergia;
     sf::Clock relojTerminal;
-
-    // --- NUEVO: Control del Estado de la Partida ---
+    
+    // --- NUEVO: Control del Tiempo y Victoria ---
+    sf::Clock relojNoche;
+    int horaActual;             // De 12 (Medianoche) a 6 AM
+    float tiempoPorHora;        // Cuántos segundos reales equivalen a 1 hora de juego (60 segundos)
+    float acumuladorHora;       // Rastrea el tiempo transcurrido para la siguiente hora
     bool juegoTerminado;
+    bool victoria;              // true si se llega a las 6 AM
     float tiempoMuerteAcumulado;
 
     void procesarEventos() {
@@ -44,8 +49,8 @@ private:
                 ventana.close();
             }
 
-            // Si el juego terminó, se ignoran por completo los inputs del jugador
-            if (juegoTerminado) return;
+            // Si la partida acabó (por ganar o perder), se congelan los controles
+            if (juegoTerminado || victoria) return;
 
             // --- CONTROL POR TECLADO ---
             if (const auto* botonPresionado = evento->getIf<sf::Event::KeyPressed>()) {
@@ -74,29 +79,46 @@ private:
     void actualizar() {
         float dt = relojEnergia.restart().asSeconds();
 
-        // --- NUEVA LÓGICA DE JUEGO TERMINADO ---
-        if (juegoTerminado) {
+        // Lógica de salida tras terminar el juego (tanto derrota como victoria)
+        if (juegoTerminado || victoria) {
             tiempoMuerteAcumulado += dt;
-            // Después de 4 segundos en pantalla de Game Over, cerramos automáticamente el juego
-            if (tiempoMuerteAcumulado >= 4.0f) {
+            if (tiempoMuerteAcumulado >= 5.0f) { // 5 segundos de pantalla final
                 ventana.close();
             }
             return; 
         }
 
+        // --- LÓGICA DEL TIEMPO DE LA NOCHE ---
+        acumuladorHora += dt;
+        if (acumuladorHora >= tiempoPorHora) {
+            acumuladorHora = 0.0f;
+            if (horaActual == 12) {
+                horaActual = 1;
+            } else {
+                horaActual++;
+            }
+
+            // CONDICIÓN DE VICTORIA: Si das las 6 AM, ganas la noche
+            if (horaActual == 6) {
+                victoria = true;
+                tiempoMuerteAcumulado = 0.0f;
+                return;
+            }
+        }
+
         jugador.bajarEnergia(dt);
 
-        // Pasamos si la puerta izquierda está realmente cerrada a la IA de Gobo
+        // Lógica de IA de Gobo
         gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
 
-        // CONDICIÓN DE DERROTA: Si Gobo logró entrar a la oficina, el Jumpscare es inminente
+        // CONDICIÓN DE DERROTA
         if (gobo.esEstaAdentro()) {
             juegoTerminado = true;
             tiempoMuerteAcumulado = 0.0f;
             return;
         }
 
-        // El mouse solo mueve la cámara si el monitor está CERRADO
+        // El mouse mueve la oficina
         if (!jugador.esMonitorAbierto()) {
             sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
             
@@ -125,6 +147,8 @@ private:
                 std::cout << "=========================================\n";
                 std::cout << "     SISTEMA DE SEGURIDAD - CINEPOLIS    \n";
                 std::cout << "=========================================\n";
+                // Mostramos la hora en la esquina superior de la consola
+                std::cout << " HORA ACTUAL      : " << horaActual << " AM\n";
                 std::cout << " ENERGIA RESTANTE : " << static_cast<int>(jugador.getEnergia()) << "%\n";
                 std::cout << " NIVEL DE CONSUMO : [ " << jugador.getNivelConsumo() << " ] ";
                 for (int i = 0; i < jugador.getNivelConsumo(); i++) std::cout << "Z";
@@ -135,10 +159,8 @@ private:
                 
                 if (gobo.esEnLaPuerta()) {
                     std::cout << " ALERTA CRITICA   : [!] ALGUIEN EN LA PUERTA IZQUIERDA\n";
-                    std::cout << "                    ¡CIERRA LA PUERTA YA!\n";
                 } else {
                     std::cout << " STATUS MONITOR   : [PANTALLA APAGADA]\n";
-                    std::cout << " VISTA ACTUAL     : Oficina Principal\n";
                 }
                 std::cout << "=========================================\n";
             }
@@ -157,11 +179,30 @@ private:
     }
 
     void renderizar() {
-        // Si perdimos, la ventana gráfica se va por completo a negro (Simulando el ataque súbito)
+        // PANTALLA DE VICTORIA (6 AM)
+        if (victoria) {
+            ventana.clear(sf::Color(10, 40, 10)); // Fondo verde oscuro celebratorio
+            
+            #ifdef _WIN32
+                std::system("cls");
+            #else
+                std::system("clear");
+            #endif
+            std::cout << "=========================================\n";
+            std::cout << "         ¡ 6 : 0 0   A M !               \n";
+            std::cout << "=========================================\n\n";
+            std::cout << "   SOBREVIVISTE LA NOCHE EN CINEPOLIS... \n";
+            std::cout << "   Tu turno ha terminado con exito.     \n\n";
+            std::cout << "=========================================\n";
+            
+            ventana.display();
+            return;
+        }
+
+        // PANTALLA DE DERROTA
         if (juegoTerminado) {
             ventana.clear(sf::Color::Black);
             
-            // Mensaje de muerte directo en la terminal
             #ifdef _WIN32
                 std::system("cls");
             #else
@@ -171,7 +212,6 @@ private:
             std::cout << "           G A M E   O V E R             \n";
             std::cout << "#########################################\n\n";
             std::cout << "   " << gobo.getNombre() << " TE ATACÓ EN LA OFICINA...\n";
-            std::cout << "   No cerraste la puerta izquierda a tiempo.\n\n";
             std::cout << "#########################################\n";
             
             ventana.display();
@@ -179,7 +219,8 @@ private:
         }
 
         if (jugador.esMonitorAbierto()) {
-            ventana.clear(sf::Color(10, 60, 15)); 
+            int tonoVerde = 30 + static_cast<int>(monitor.getCamaraActual()) * 15;
+            ventana.clear(sf::Color(10, tonoVerde, 15)); 
         } else {
             ventana.clear(sf::Color(40, 40, 40));
         }
@@ -207,8 +248,15 @@ private:
     }
 
 public:
-    // Inicializamos las nuevas variables en el constructor
-    Motor() : gobo("Gobo", 12), juegoTerminado(false), tiempoMuerteAcumulado(0.0f) {
+    // Configuración inicial de las variables del tiempo
+    Motor() : gobo("Gobo", 12), 
+              horaActual(12), 
+              tiempoPorHora(15.0f),  // NOTA: Cambiado a 15 segundos por hora para testear rápido (Noche de 1.5 minutos)
+              acumuladorHora(0.0f), 
+              juegoTerminado(false), 
+              victoria(false), 
+              tiempoMuerteAcumulado(0.0f) {
+                  
         std::srand(static_cast<unsigned int>(std::time(nullptr))); 
         
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
@@ -242,6 +290,7 @@ public:
 
         relojEnergia.restart();
         relojTerminal.restart();
+        relojNoche.restart();
     }
 
     ~Motor() {}
