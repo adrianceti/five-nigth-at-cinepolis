@@ -20,16 +20,17 @@ private:
     sf::View vistaInterfaz; 
     float posicionCamaraX;
     float velocidadCamara;
+    float anchoVirtualOficina; // Ancho objetivo para forzar el paneo panorámico
 
     // Componentes Visuales de las Puertas
     sf::RectangleShape visualPuertaIzquierda;
     sf::RectangleShape visualPuertaDerecha;
 
-    // Indicadores Gráficos del HUD (Inmunes a fallos de archivos externos)
+    // Indicadores Gráficos del HUD
     sf::RectangleShape barraEnergiaFondo;
     sf::RectangleShape barraEnergiaFrente;
     sf::RectangleShape bloquesConsumo[4]; 
-    sf::RectangleShape bloquesReloj[6];   // 6 Bloques geométricos para las horas (1 AM a 6 AM)
+    sf::RectangleShape bloquesReloj[6];   
 
     // Entidades del juego
     Guardia jugador;
@@ -114,7 +115,7 @@ private:
             return;
         }
 
-        // --- ACTUALIZAR HUD GRÁFICO (BATERÍA) ---
+        // Actualizar barra de energía
         float porcentajeEnergia = jugador.getEnergia() / 100.0f;
         if (porcentajeEnergia < 0.0f) porcentajeEnergia = 0.0f;
         barraEnergiaFrente.setSize(sf::Vector2f(250.0f * porcentajeEnergia, 20.0f));
@@ -125,28 +126,27 @@ private:
             barraEnergiaFrente.setFillColor(sf::Color::Green);
         }
 
-        // --- ACTUALIZAR RELOJ GRÁFICO (BLOQUES EN PANTALLA) ---
-        // Evalúa cuántas horas han pasado para encender los bloques correspondientes
+        // Actualizar bloques del reloj
         int horasTranscurridas = (horaActual == 12) ? 0 : horaActual;
         for (int i = 0; i < 6; i++) {
             if (i < horasTranscurridas) {
-                bloquesReloj[i].setFillColor(sf::Color::Cyan); // Hora activa (Luz Cyan)
+                bloquesReloj[i].setFillColor(sf::Color::Cyan); 
             } else {
-                bloquesReloj[i].setFillColor(sf::Color(45, 45, 50)); // Hora futura (Gris oscuro)
+                bloquesReloj[i].setFillColor(sf::Color(45, 45, 50)); 
             }
         }
 
-        // El mouse mueve la oficina panorámica de forma fluida
+        // Movimiento de la cámara panorámica libre
         if (!jugador.esMonitorAbierto()) {
             sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
             
             if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
-                if (posicionMouse.x > 1050) posicionCamaraX += velocidadCamara * dt;
-                else if (posicionMouse.x < 230) posicionCamaraX -= velocidadCamara * dt;
+                if (posicionMouse.x > 1000) posicionCamaraX += velocidadCamara * dt;
+                else if (posicionMouse.x < 280) posicionCamaraX -= velocidadCamara * dt;
 
-                // Límites de paneo ajustados para el tamaño de tu render de la oficina
+                // Límites basados en el ancho virtual de 1600 para permitir el paneo lateral
                 if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
-                if (posicionCamaraX > 1100.0f) posicionCamaraX = 1100.0f; 
+                if (posicionCamaraX > (anchoVirtualOficina - 640.0f)) posicionCamaraX = anchoVirtualOficina - 640.0f; 
 
                 vistaOficina.setCenter({posicionCamaraX, 360.0f});
             }
@@ -178,13 +178,13 @@ private:
 
     void renderizar() {
         if (victoria) {
-            ventana.clear(sf::Color(20, 80, 20)); // Pantalla de victoria masiva
+            ventana.clear(sf::Color(20, 80, 20)); 
             ventana.display();
             return;
         }
 
         if (juegoTerminado) {
-            ventana.clear(sf::Color::Red); // Pantalla de Game Over
+            ventana.clear(sf::Color::Red); 
             ventana.display();
             return;
         }
@@ -196,7 +196,7 @@ private:
             ventana.clear(sf::Color::Black);
         }
         
-        // 1. DIBUJAR ENTORNO DINÁMICO (Se desplaza con la cámara)
+        // 1. DIBUJAR ENTORNO (Móvil)
         ventana.setView(vistaOficina);
         if (!jugador.esMonitorAbierto()) {
             if (spriteOficina.has_value()) {
@@ -211,21 +211,18 @@ private:
             }
         }
         
-        // 2. DIBUJAR INTERFAZ DE USUARIO ESTÁTICA (HUD flotante sobre la pantalla)
+        // 2. DIBUJAR INTERFAZ (Fija)
         ventana.setView(vistaInterfaz); 
         if (jugador.esMonitorAbierto()) {
             monitor.renderizar(ventana);
         } else {
-            // Dibujar componentes de la batería
             ventana.draw(barraEnergiaFondo);
             ventana.draw(barraEnergiaFrente);
 
-            // Dibujar cubos de consumo activos
             for (int i = 0; i < jugador.getNivelConsumo() && i < 4; i++) {
                 ventana.draw(bloquesConsumo[i]);
             }
 
-            // --- AQUÍ SE DIBUJA EL RELOJ ---
             for (int i = 0; i < 6; i++) {
                 ventana.draw(bloquesReloj[i]);
             }
@@ -237,27 +234,42 @@ private:
 public:
     Motor() : gobo("Gobo", 12), 
               horaActual(12), 
-              tiempoPorHora(15.0f),  // 15 segundos por hora para testear rápido la victoria
+              tiempoPorHora(15.0f),  
               acumuladorHora(0.0f), 
               juegoTerminado(false), 
               victoria(false), 
-              tiempoMuerteAcumulado(0.0f) {
+              tiempoMuerteAcumulado(0.0f),
+              anchoVirtualOficina(1640.0f) { // Espacio panorámico ideal para que funcione el paneo
                   
         std::srand(static_cast<unsigned int>(std::time(nullptr))); 
         
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
+
+        // Configuración de las vistas
+        posicionCamaraX = anchoVirtualOficina / 2.0f; // Centrado perfecto en 820.0f
+        velocidadCamara = 600.0f; 
         
-        // Configuración de la cámara panorámica (centrada en 800.0f)
-        posicionCamaraX = 800.0f; 
-        velocidadCamara = 550.0f; 
         vistaOficina.setSize({1280.0f, 720.0f});
         vistaOficina.setCenter({posicionCamaraX, 360.0f});
 
         vistaInterfaz.setSize({1280.0f, 720.0f});
         vistaInterfaz.setCenter({640.0f, 360.0f});
 
-        // Inicialización visual de la batería
+        if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
+            std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
+        } else {
+            spriteOficina.emplace(texturaOficina);
+            
+            // Forzamos a la imagen a estirarse sutilmente a nivel panorámico (1640x720)
+            // Esto garantiza que el mouse sí pueda mover la cámara a los lados pase lo que pase
+            spriteOficina.value().setScale({
+                anchoVirtualOficina / static_cast<float>(texturaOficina.getSize().x),
+                720.0f / static_cast<float>(texturaOficina.getSize().y)
+            });
+        }
+
+        // Configuración visual del medidor de batería
         barraEnergiaFondo.setSize(sf::Vector2f(250.0f, 20.0f));
         barraEnergiaFondo.setFillColor(sf::Color(50, 50, 50));
         barraEnergiaFondo.setOutlineColor(sf::Color::White);
@@ -276,33 +288,26 @@ public:
             bloquesConsumo[i].setPosition(sf::Vector2f(310.0f + (i * 20.0f), 650.0f));
         }
 
-        // --- INICIALIZAR BLOQUES DEL RELOJ (Esquina superior derecha) ---
+        // Configuración de los bloques del Reloj
         for (int i = 0; i < 6; i++) {
             bloquesReloj[i].setSize(sf::Vector2f(25.0f, 15.0f));
             bloquesReloj[i].setOutlineColor(sf::Color::White);
             bloquesReloj[i].setOutlineThickness(1.5f);
-            // Colocados uno al lado del otro fijos en la esquina derecha de la pantalla
             bloquesReloj[i].setPosition(sf::Vector2f(1050.0f + (i * 32.0f), 30.0f));
         }
 
-        // Coordenadas relativas de las puertas
-        visualPuertaIzquierda.setSize(sf::Vector2f(260.0f, 680.0f));
-        visualPuertaIzquierda.setFillColor(sf::Color(35, 35, 40, 245)); 
-        visualPuertaIzquierda.setOutlineColor(sf::Color(100, 100, 100));
-        visualPuertaIzquierda.setOutlineThickness(4.0f);
-        visualPuertaIzquierda.setPosition(sf::Vector2f(60.0f, 20.0f)); 
+        // Coordenadas fijas de las puertas en los extremos del mapa virtual
+        visualPuertaIzquierda.setSize(sf::Vector2f(240.0f, 720.0f));
+        visualPuertaIzquierda.setFillColor(sf::Color(30, 30, 35, 240)); 
+        visualPuertaIzquierda.setOutlineColor(sf::Color(80, 80, 80));
+        visualPuertaIzquierda.setOutlineThickness(3.0f);
+        visualPuertaIzquierda.setPosition(sf::Vector2f(0.0f, 0.0f)); // Extremo izquierdo absoluto
 
-        visualPuertaDerecha.setSize(sf::Vector2f(260.0f, 680.0f));
-        visualPuertaDerecha.setFillColor(sf::Color(35, 35, 40, 245));
-        visualPuertaDerecha.setOutlineColor(sf::Color(100, 100, 100));
-        visualPuertaDerecha.setOutlineThickness(4.0f);
-        visualPuertaDerecha.setPosition(sf::Vector2f(1340.0f, 20.0f)); 
-
-        if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
-            std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
-        } else {
-            spriteOficina.emplace(texturaOficina);
-        }
+        visualPuertaDerecha.setSize(sf::Vector2f(240.0f, 720.0f));
+        visualPuertaDerecha.setFillColor(sf::Color(30, 30, 35, 240));
+        visualPuertaDerecha.setOutlineColor(sf::Color(80, 80, 80));
+        visualPuertaDerecha.setOutlineThickness(3.0f);
+        visualPuertaDerecha.setPosition(sf::Vector2f(anchoVirtualOficina - 240.0f, 0.0f)); // Extremo derecho absoluto
 
         relojEnergia.restart();
         relojTerminal.restart();
