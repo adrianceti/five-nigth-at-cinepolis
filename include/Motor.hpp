@@ -35,7 +35,11 @@ private:
     // Entidades del juego
     Guardia jugador;
     MonitorCamaras monitor; 
-    Personaje gobo; 
+    Gobo gobo;
+    Director director;
+    Popy popy;
+    TheUsher usher;
+    TicketyStub stub; 
 
     // Relojes de control
     sf::Clock relojEnergia;
@@ -107,9 +111,17 @@ private:
         }
 
         jugador.bajarEnergia(dt);
-        gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
 
-        if (gobo.esEstaAdentro()) {
+        // Actualizar a todos los personajes
+        gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
+        director.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
+        popy.actualizarIA(dt, jugador.esPuertaDerechaCerrada());
+        usher.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
+        stub.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
+
+        // Verificar si algún personaje logró entrar
+        if (gobo.esEstaAdentro() || director.esEstaAdentro() || popy.esEstaAdentro() || 
+            usher.esEstaAdentro() || stub.esEstaAdentro()) {
             juegoTerminado = true;
             tiempoMuerteAcumulado = 0.0f;
             return;
@@ -162,13 +174,27 @@ private:
             std::cout << "  RELOJ DE LA NOCHE : " << horaActual << " AM \n";
             std::cout << "  ENERGIA RESTANTE  : " << static_cast<int>(jugador.getEnergia()) << "%\n";
             std::cout << "=========================================\n";
+            
+            // Mostrar amenazas activas
+            std::cout << "  AMENAZAS ACTIVAS:\n";
+            if (gobo.esEnLaPuerta()) std::cout << "    [!] " << gobo.getNombre() << " EN LA PUERTA IZQ\n";
+            if (director.esEnLaPuerta()) std::cout << "    [!] " << director.getNombre() << " EN LA PUERTA IZQ\n";
+            if (usher.esEnLaPuerta()) std::cout << "    [!] " << usher.getNombre() << " EN LA PUERTA IZQ\n";
+            if (stub.esEnLaPuerta()) std::cout << "    [!] " << stub.getNombre() << " EN LA PUERTA IZQ\n";
+            if (popy.esEnLaPuerta()) std::cout << "    [!] " << popy.getNombre() << " EN LA PUERTA DER\n";
+            
+            if (!gobo.esEnLaPuerta() && !director.esEnLaPuerta() && !popy.esEnLaPuerta() && 
+                !usher.esEnLaPuerta() && !stub.esEnLaPuerta()) {
+                std::cout << "    [OK] Ninguna amenaza activa\n";
+            }
+            std::cout << "=========================================\n";
             relojTerminal.restart();
         }
 
         if (spriteOficina.has_value()) {
             if (jugador.getEnergia() <= 0.0f) {
                 spriteOficina.value().setColor(sf::Color(10, 10, 30)); 
-            } else if (gobo.esEnLaPuerta()) {
+            } else if (gobo.esEnLaPuerta() || director.esEnLaPuerta() || usher.esEnLaPuerta() || stub.esEnLaPuerta()) {
                 spriteOficina.value().setColor(sf::Color(255, 180, 180)); 
             } else {
                 spriteOficina.value().setColor(sf::Color::White);
@@ -232,7 +258,7 @@ private:
     }
 
 public:
-    Motor() : gobo("Gobo", 12), 
+    Motor() : gobo(12), director(14), popy(10), usher(16), stub(8), 
               horaActual(12), 
               tiempoPorHora(15.0f),  
               acumuladorHora(0.0f), 
