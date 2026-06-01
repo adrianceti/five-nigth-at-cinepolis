@@ -114,7 +114,7 @@ private:
         // --- MONITOR DE TELEMETRÍA EN TERMINAL ---
         if (relojTerminal.getElapsedTime().asSeconds() >= 0.1f) {
             if (jugador.esMonitorAbierto()) {
-                monitor.mostrarEnTerminal(gobo.getPosicionActual(), gobo.getNombre());
+                monitor.mostrarEnTerminal();
             } else {
                 #ifdef _WIN32
                     std::system("cls");
@@ -179,8 +179,7 @@ private:
         }
 
         if (jugador.esMonitorAbierto()) {
-            int tonoVerde = 30 + static_cast<int>(monitor.getCamaraActual()) * 15;
-            ventana.clear(sf::Color(10, tonoVerde, 15)); 
+            ventana.clear(sf::Color(10, 60, 15)); 
         } else {
             ventana.clear(sf::Color(40, 40, 40));
         }
