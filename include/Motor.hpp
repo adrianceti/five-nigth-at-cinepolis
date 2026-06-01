@@ -3,8 +3,10 @@
 #include <SFML/Graphics.hpp>
 #include <optional>
 #include <iostream>
+#include <ctime>      // Para inicializar la semilla aleatoria de la IA
 #include "Guardia.hpp"
-#include "MonitorCamaras.hpp" // Nueva inclusión con el nombre corregido
+#include "MonitorCamaras.hpp"
+#include "Personaje.hpp" // Asegúrate de tener este archivo creado
 
 class Motor {
 private:
@@ -15,13 +17,14 @@ private:
 
     // --- Control de Cámara (Vista) ---
     sf::View vistaOficina;
-    sf::View vistaInterfaz; // NUEVO: Cámara estática para que el HUD no se mueva al girar la oficina
+    sf::View vistaInterfaz; 
     float posicionCamaraX;
     float velocidadCamara;
 
-    // Instancia del jugador, el monitor y los relojes de control
+    // Instancia del jugador, el monitor, el enemigo y los relojes de control
     Guardia jugador;
-    MonitorCamaras monitor; // NUEVO: Instancia del sistema de cámaras
+    MonitorCamaras monitor; 
+    Personaje gobo; // NUEVO: Instancia del animatrónico enemigo
     sf::Clock relojEnergia;
     sf::Clock relojTerminal;
 
@@ -40,12 +43,12 @@ private:
                     jugador.alternarPuertaDerecha();
                 }
                 
-                // NUEVO: Abrir/Cerrar monitor con la Barra Espaciadora
+                // Abrir/Cerrar monitor con la Barra Espaciadora
                 if (botonPresionado->code == sf::Keyboard::Key::Space) {
                     jugador.alternarMonitor();
                 }
 
-                // NUEVO: Cambiar canales de cámara con números del 1 al 5 si el monitor está abierto
+                // Cambiar canales de cámara con números del 1 al 5 si el monitor está abierto
                 if (jugador.esMonitorAbierto()) {
                     if (botonPresionado->code == sf::Keyboard::Key::Num1) monitor.cambiarCamara(TipoCamara::CAM_01_DULCERIA);
                     if (botonPresionado->code == sf::Keyboard::Key::Num2) monitor.cambiarCamara(TipoCamara::CAM_02_PASILLO_A);
@@ -61,7 +64,16 @@ private:
         float dt = relojEnergia.restart().asSeconds();
         jugador.bajarEnergia(dt);
 
-        // MODIFICACIÓN: El mouse solo mueve la cámara si el monitor está CERRADO
+        // NUEVO: Actualizamos la Inteligencia Artificial de Gobo en cada frame
+        gobo.actualizarIA(dt);
+
+        // REGLA DE JUEGO: Si Gobo está en la puerta y el jugador cierra la puerta izquierda, Gobo regresa a la dulcería
+        if (gobo.esEnLaPuerta() && jugador.esPuertaIzquierdaCerrada()) {
+            gobo.resetear();
+            std::cout << "\a"; // Pitido de advertencia en consola indicando que rebotó con éxito
+        }
+
+        // El mouse solo mueve la cámara si el monitor está CERRADO
         if (!jugador.esMonitorAbierto()) {
             sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
             
@@ -80,10 +92,10 @@ private:
             }
         }
 
-        // --- NUEVO: MONITOR DE TELEMETRÍA EN TERMINAL CONTROLADO ---
+        // --- MONITOR DE TELEMETRÍA EN TERMINAL CONTROLADO ---
         if (relojTerminal.getElapsedTime().asSeconds() >= 0.1f) {
             if (jugador.esMonitorAbierto()) {
-                // Si el monitor está abierto, mostramos la estática y la información del monitor
+                // Si el monitor está abierto, delegamos la impresión al monitor
                 monitor.mostrarEnTerminal();
             } else {
                 // Si el monitor está cerrado, mostramos el HUD de la oficina
@@ -103,8 +115,14 @@ private:
                 std::cout << " PUERTA IZQUIERDA : " << (jugador.esPuertaIzquierdaCerrada() ? "[X] CERRADA" : "[ ] ABIERTA") << "\n";
                 std::cout << " PUERTA DERECHA   : " << (jugador.esPuertaDerechaCerrada() ? "[X] CERRADA" : "[ ] ABIERTA") << "\n";
                 std::cout << "-----------------------------------------\n";
-                std::cout << " STATUS MONITOR   : [PANTALLA APAGADA]\n";
-                std::cout << " VISTA ACTUAL     : Oficina Principal\n";
+                
+                // ALERTA DE PELIGRO: Te avisa en la oficina si Gobo está en el marco esperando a que te descuides
+                if (gobo.esEnLaPuerta()) {
+                    std::cout << " PELIGRO INMINENTE: [!] ALGUIEN EN LA PUERTA IZQUIERDA\n";
+                } else {
+                    std::cout << " STATUS MONITOR   : [PANTALLA APAGADA]\n";
+                    std::cout << " VISTA ACTUAL     : Oficina Principal\n";
+                }
                 std::cout << "=========================================\n";
                 std::cout << " Controles: 'A' Puerta Izq | 'D' Puerta Der | 'ESPACIO' Monitor\n";
             }
@@ -112,12 +130,14 @@ private:
             relojTerminal.restart();
         }
 
-        // Efecto visual de apagón o estática de cámaras
+        // Efecto visual de apagón, estática o alerta en la oficina
         if (spriteOficina.has_value()) {
             if (jugador.getEnergia() <= 0.0f) {
                 spriteOficina.value().setColor(sf::Color(10, 10, 30)); 
+            } else if (gobo.esEnLaPuerta()) {
+                spriteOficina.value().setColor(sf::Color(255, 120, 120)); // Parpadeo rojizo de peligro si está afuera
             } else if (jugador.esMonitorAbierto()) {
-                spriteOficina.value().setColor(sf::Color(40, 60, 40)); // Filtro verde de visión nocturna
+                spriteOficina.value().setColor(sf::Color(40, 60, 40)); 
             } else {
                 spriteOficina.value().setColor(sf::Color::White);
             }
@@ -133,7 +153,7 @@ private:
             ventana.draw(spriteOficina.value());
         }
         
-        // 2. NUEVO: Si el monitor está abierto, cambiamos a la vista fija y superponemos el mapa
+        // 2. Si el monitor está abierto, cambiamos a la vista fija y superponemos el mapa
         if (jugador.esMonitorAbierto()) {
             ventana.setView(vistaInterfaz); 
             monitor.renderizar(ventana);
@@ -143,7 +163,10 @@ private:
     }
 
 public:
-    Motor() {
+    // Inicializamos a Gobo con un nivel de dificultad de 12 para que sea activo en el testeo
+    Motor() : gobo("Gobo", 12) {
+        std::srand(static_cast<unsigned int>(std::time(nullptr))); // Semilla para la aleatoriedad de la IA
+        
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
         
@@ -153,7 +176,7 @@ public:
         vistaOficina.setSize({1280.0f, 720.0f});
         vistaOficina.setCenter({posicionCamaraX, 360.0f});
 
-        // NUEVO: Inicializamos la vista fija de interfaz
+        // Inicializamos la vista fija de interfaz
         vistaInterfaz.setSize({1280.0f, 720.0f});
         vistaInterfaz.setCenter({640.0f, 360.0f});
 
