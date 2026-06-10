@@ -47,7 +47,10 @@ public:
     void bajarEnergia(float tiempoTranscurrido) {
         if (energia > 0.0f) {
             // La velocidad de caída depende del nivel de consumo actual
-            energia -= (nivelConsumo * 1.5f) * tiempoTranscurrido;
+            // Multiplicador: 0.3f permite que la energía dure para toda la noche
+            // Consumo base (solo oficina): 1 * 0.3 * 120s = 36 puntos/hora
+            // Con todas las cosas activadas: 5 * 0.3 * 120s = 180 puntos/hora (consume rápido si eres imprudente)
+            energia -= (nivelConsumo * 0.3f) * tiempoTranscurrido;
             if (energia < 0.0f) energia = 0.0f;
         }
     }
