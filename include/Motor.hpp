@@ -334,7 +334,7 @@ private:
 
     void renderizarPersonajeEnPuerta(sf::RenderWindow& ventana, const std::string& nombre, bool esIzquierda) {
         if (spritesPersonajesPuerta.find(nombre) != spritesPersonajesPuerta.end()) {
-            sf::Sprite sprite = spritesPersonajesPuerta[nombre];
+            sf::Sprite sprite = spritesPersonajesPuerta.at(nombre);
             
             if (esIzquierda) {
                 sprite.setPosition(sf::Vector2f(50.0f, 200.0f));
