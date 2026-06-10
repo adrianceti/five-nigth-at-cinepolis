@@ -8,11 +8,14 @@ private:
     bool puertaIzquierda;   // true = cerrada, false = abierta
     bool puertaDerecha;     // true = cerrada, false = abierta
     bool monitorAbierto;    // true = viendo cámaras, false = en la oficina
+    bool luzIzquierda;      // true = encendida, false = apagada (tecla Q)
+    bool luzDerecha;        // true = encendida, false = apagada (tecla E)
 
 public:
     Guardia() 
         : energia(100.0f), nivelConsumo(1), 
-          puertaIzquierda(false), puertaDerecha(false), monitorAbierto(false) {}
+          puertaIzquierda(false), puertaDerecha(false), monitorAbierto(false),
+          luzIzquierda(false), luzDerecha(false) {}
 
     // Métodos para cambiar los estados (Acciones del jugador)
     void alternarPuertaIzquierda() { 
@@ -27,6 +30,16 @@ public:
     
     void alternarMonitor() { 
         monitorAbierto = !monitorAbierto; 
+        actualizarConsumo();
+    }
+
+    void alternarLuzIzquierda() {
+        luzIzquierda = !luzIzquierda;
+        actualizarConsumo();
+    }
+
+    void alternarLuzDerecha() {
+        luzDerecha = !luzDerecha;
         actualizarConsumo();
     }
 
@@ -45,6 +58,8 @@ public:
     bool esPuertaIzquierdaCerrada() const { return puertaIzquierda; }
     bool esPuertaDerechaCerrada() const { return puertaDerecha; }
     bool esMonitorAbierto() const { return monitorAbierto; }
+    bool esLuzIzquierdaEncendida() const { return luzIzquierda; }
+    bool esLuzDerechaEncendida() const { return luzDerecha; }
 
 private:
     // Calcula cuánta energía se está drenando según los aparatos activos
@@ -53,5 +68,7 @@ private:
         if (puertaIzquierda) nivelConsumo++;
         if (puertaDerecha) nivelConsumo++;
         if (monitorAbierto) nivelConsumo++;
+        if (luzIzquierda) nivelConsumo++;
+        if (luzDerecha) nivelConsumo++;
     }
 };
