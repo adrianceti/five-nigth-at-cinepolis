@@ -25,6 +25,7 @@ private:
 
     // Sistema de texturas y renderización
     std::map<TipoCamara, sf::Texture> texturasFondo;
+    std::map<TipoCamara, sf::Color> colorFondoFallback;
     std::map<std::string, sf::Texture> texturasPersonajes;
     
     // Registro de personajes en cada cámara (nombre -> presente)
@@ -48,8 +49,33 @@ private:
     }
 
     void cargarTexturasFondo() {
-        // Cargar fondos de cámaras (si existen, opcional)
-        // Por ahora usaremos colores dinámicos, pero aquí podría haber fondos reales
+        // Intentar cargar fondos de cámaras desde assets/textures/camaras/
+        std::vector<std::pair<TipoCamara, std::string>> camaras = {
+            {TipoCamara::CAM_01_DULCERIA, "dulceria.png"},
+            {TipoCamara::CAM_02_PASILLO_A, "pasillo_a.png"},
+            {TipoCamara::CAM_03_PASILLO_B, "pasillo_b.png"},
+            {TipoCamara::CAM_04_SALAS, "sala.png"},
+            {TipoCamara::CAM_05_BANOS, "banos.png"}
+        };
+        
+        for (const auto& camara : camaras) {
+            std::string ruta = "assets/textures/camaras/" + camara.second;
+            sf::Texture textura;
+            
+            if (textura.loadFromFile(ruta)) {
+                texturasFondo[camara.first] = textura;
+                std::cerr << "✓ Cargado fondo de cámara desde " << ruta << std::endl;
+            } else {
+                std::cerr << "⚠ No se encontró " << ruta << " - usando color de fallback" << std::endl;
+            }
+        }
+        
+        // Configurar colores de fallback para cada cámara
+        colorFondoFallback[TipoCamara::CAM_01_DULCERIA] = sf::Color(60, 80, 40);    // Verde oscuro (dulcería)
+        colorFondoFallback[TipoCamara::CAM_02_PASILLO_A] = sf::Color(50, 60, 70);   // Gris azulado (pasillo izq)
+        colorFondoFallback[TipoCamara::CAM_03_PASILLO_B] = sf::Color(50, 60, 70);   // Gris azulado (pasillo der)
+        colorFondoFallback[TipoCamara::CAM_04_SALAS] = sf::Color(70, 50, 50);       // Marrón rojizo (sala)
+        colorFondoFallback[TipoCamara::CAM_05_BANOS] = sf::Color(60, 70, 80);       // Gris frío (baños)
     }
 
     void cargarTexturasPersonajes() {
@@ -107,7 +133,8 @@ public:
         cajaMapa.setOutlineThickness(3.f);
         cajaMapa.setPosition(sf::Vector2f(850.f, 90.f)); // Esquina derecha de la pantalla
         
-        // Cargar texturas
+        // Cargar texturas y fondos
+        cargarTexturasFondo();
         cargarTexturasPersonajes();
         
         // Inicializar registro de personajes
@@ -153,15 +180,27 @@ public:
     void renderizar(sf::RenderWindow& ventana) {
         ventana.draw(cajaMapa);
         
-        // Dibujar fondos según cámara
-        sf::Color colorFondo = obtenerColorFondo();
-        sf::RectangleShape fondoMonitor(sf::Vector2f(360.f, 480.f));
-        fondoMonitor.setFillColor(colorFondo);
-        fondoMonitor.setPosition(sf::Vector2f(870.f, 110.f));
-        ventana.draw(fondoMonitor);
-        
-        // Dibujar sprites de personajes si hay en la cámara actual
-        dibujarPersonajesEnMonitor(ventana);
+        // Dibujar fondo de la cámara (textura o color)
+        if (texturasFondo.find(camaraActual) != texturasFondo.end()) {
+            // Si existe textura, dibujarla
+            sf::Sprite fondoSprite(texturasFondo.at(camaraActual));
+            fondoSprite.setPosition(sf::Vector2f(870.f, 110.f));
+            // Escalar para que quepa en el monitor (360x480)
+            float escalaX = 360.0f / texturasFondo.at(camaraActual).getSize().x;
+            float escalaY = 480.0f / texturasFondo.at(camaraActual).getSize().y;
+            fondoSprite.setScale({escalaX, escalaY});
+            ventana.draw(fondoSprite);
+        } else {
+            // Si no existe textura, usar color de fallback
+            sf::Color colorFondo = colorFondoFallback.count(camaraActual) > 0 
+                ? colorFondoFallback.at(camaraActual)
+                : sf::Color(40, 60, 30);
+            
+            sf::RectangleShape fondoMonitor(sf::Vector2f(360.f, 480.f));
+            fondoMonitor.setFillColor(colorFondo);
+            fondoMonitor.setPosition(sf::Vector2f(870.f, 110.f));
+            ventana.draw(fondoMonitor);
+        }
         
         // Dibuja líneas horizontales (efecto de scanlines)
         for (float y = 110.0f; y < 600.0f; y += 20.0f) {
@@ -174,15 +213,11 @@ public:
 
 private:
     sf::Color obtenerColorFondo() const {
-        // Colores dinámicos según la cámara (fondo limpio)
-        switch (camaraActual) {
-            case TipoCamara::CAM_01_DULCERIA:  return sf::Color(40, 60, 30);
-            case TipoCamara::CAM_02_PASILLO_A: return sf::Color(30, 50, 40);
-            case TipoCamara::CAM_03_PASILLO_B: return sf::Color(30, 50, 40);
-            case TipoCamara::CAM_04_SALAS:     return sf::Color(35, 55, 35);
-            case TipoCamara::CAM_05_BANOS:     return sf::Color(40, 50, 50);
-            default:                           return sf::Color(20, 40, 20);
+        // Esta función ya no es necesaria pero la mantenemos por compatibilidad
+        if (colorFondoFallback.count(camaraActual) > 0) {
+            return colorFondoFallback.at(camaraActual);
         }
+        return sf::Color(20, 40, 20);
     }
 
     void dibujarPersonajesEnMonitor(sf::RenderWindow& ventana) {
