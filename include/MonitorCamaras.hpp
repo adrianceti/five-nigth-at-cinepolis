@@ -194,7 +194,7 @@ public:
     // Dibuja un personaje específico en el monitor en la posición central
     void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre) {
         if (spritesPersonajes.find(nombre) != spritesPersonajes.end()) {
-            sf::Sprite& sprite = spritesPersonajes[nombre];
+            sf::Sprite sprite = spritesPersonajes.at(nombre);
             // Posicionar en centro del monitor
             sprite.setPosition(sf::Vector2f(920.f, 280.f));
             ventana.draw(sprite);
