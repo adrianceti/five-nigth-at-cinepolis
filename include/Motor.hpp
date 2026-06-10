@@ -368,7 +368,7 @@ public:
               relojTerminal(),
               relojNoche(),
               horaActual(12),
-              tiempoPorHora(15.0f),
+              tiempoPorHora(120.0f),  // Cada hora dura 120 segundos (2 minutos) - Total: ~12 minutos para 6 noches
               acumuladorHora(0.0f),
               juegoTerminado(false),
               victoria(false),
