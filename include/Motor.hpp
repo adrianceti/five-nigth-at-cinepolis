@@ -4,6 +4,7 @@
 #include <optional>
 #include <iostream>
 #include <ctime>      
+#include <map>
 #include "Guardia.hpp"
 #include "MonitorCamaras.hpp"
 #include "Personaje.hpp" 
@@ -25,6 +26,12 @@ private:
     // Componentes Visuales de las Puertas
     sf::RectangleShape visualPuertaIzquierda;
     sf::RectangleShape visualPuertaDerecha;
+
+    // Sistema de iluminación de pasillos (sprites y texturas)
+    std::map<std::string, sf::Texture> texturasPersonajesPuerta;
+    std::map<std::string, sf::Sprite> spritesPersonajesPuerta;
+    sf::RectangleShape marcoLuzIzquierda;
+    sf::RectangleShape marcoLuzDerecha;
 
     // Indicadores Gráficos del HUD
     sf::RectangleShape barraEnergiaFondo;
@@ -54,6 +61,44 @@ private:
     bool victoria;              
     float tiempoMuerteAcumulado;
 
+    void cargarTexturasPersonajesPuerta() {
+        // Cargar sprites de personajes para mostrar en las puertas
+        std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
+        std::vector<std::string> carpetas = {"gobo", "director", "popy", "theusher", "ticketystub"};
+        
+        for (size_t i = 0; i < personajes.size(); i++) {
+            std::string rutaBase = "assets/textures/personajes/" + carpetas[i] + "/sprite" + carpetas[i] + "/";
+            
+            sf::Texture textura;
+            bool cargada = false;
+            
+            // Intentar múltiples variantes de nombre de archivo
+            std::vector<std::string> nombresPosibles = {
+                "sprite" + carpetas[i] + ".png",
+                personajes[i] + ".png",
+                "sprite.png",
+                carpetas[i] + ".png"
+            };
+            
+            for (const auto& nombre : nombresPosibles) {
+                if (textura.loadFromFile(rutaBase + nombre)) {
+                    cargada = true;
+                    std::cerr << "✓ Cargada textura de puerta para " << personajes[i] << " desde " << rutaBase + nombre << std::endl;
+                    break;
+                }
+            }
+            
+            if (cargada) {
+                texturasPersonajesPuerta.insert({personajes[i], textura});
+                sf::Sprite sprite(textura);
+                sprite.setScale({0.5f, 0.5f}); // Escalar a tamaño visible en puerta
+                spritesPersonajesPuerta.insert({personajes[i], sprite});
+            } else {
+                std::cerr << "⚠ No se encontró textura de puerta para " << personajes[i] << std::endl;
+            }
+        }
+    }
+
     void procesarEventos() {
         while (const std::optional<sf::Event> evento = ventana.pollEvent()) {
             if (evento->is<sf::Event::Closed>()) {
@@ -72,6 +117,14 @@ private:
                 
                 if (botonPresionado->code == sf::Keyboard::Key::Space) {
                     jugador.alternarMonitor();
+                }
+
+                // Luces de pasillo - Q para izquierda, E para derecha
+                if (botonPresionado->code == sf::Keyboard::Key::Q) {
+                    jugador.alternarLuzIzquierda();
+                }
+                if (botonPresionado->code == sf::Keyboard::Key::E) {
+                    jugador.alternarLuzDerecha();
                 }
 
                 if (jugador.esMonitorAbierto()) {
@@ -229,11 +282,26 @@ private:
                 ventana.draw(spriteOficina.value());
             }
 
+            // Dibujar puertas visuales
             if (jugador.esPuertaIzquierdaCerrada()) {
                 ventana.draw(visualPuertaIzquierda);
             }
             if (jugador.esPuertaDerechaCerrada()) {
                 ventana.draw(visualPuertaDerecha);
+            }
+
+            // Renderizar personajes en las puertas si tienen luz encendida
+            if (jugador.esLuzIzquierdaEncendida()) {
+                ventana.draw(marcoLuzIzquierda);
+                if (gobo.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, gobo.getNombre(), true);
+                if (director.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, director.getNombre(), true);
+                if (usher.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, usher.getNombre(), true);
+                if (stub.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, stub.getNombre(), true);
+            }
+            
+            if (jugador.esLuzDerechaEncendida()) {
+                ventana.draw(marcoLuzDerecha);
+                if (popy.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, popy.getNombre(), false);
             }
         }
         
@@ -241,6 +309,13 @@ private:
         ventana.setView(vistaInterfaz); 
         if (jugador.esMonitorAbierto()) {
             monitor.renderizar(ventana);
+            
+            // Mostrar personajes en la cámara actual del monitor
+            if (gobo.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Gobo");
+            if (director.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Director");
+            if (popy.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Popy");
+            if (usher.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TheUsher");
+            if (stub.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TicketyStub");
         } else {
             ventana.draw(barraEnergiaFondo);
             ventana.draw(barraEnergiaFrente);
@@ -257,15 +332,47 @@ private:
         ventana.display();
     }
 
+    void renderizarPersonajeEnPuerta(sf::RenderWindow& ventana, const std::string& nombre, bool esIzquierda) {
+        if (spritesPersonajesPuerta.find(nombre) != spritesPersonajesPuerta.end()) {
+            sf::Sprite sprite = spritesPersonajesPuerta[nombre];
+            
+            if (esIzquierda) {
+                sprite.setPosition(sf::Vector2f(50.0f, 200.0f));
+            } else {
+                sprite.setPosition(sf::Vector2f(anchoVirtualOficina - 150.0f, 200.0f));
+            }
+            
+            ventana.draw(sprite);
+        }
+    }
+
 public:
-    Motor() : gobo(12), director(14), popy(10), usher(16), stub(8), 
-              horaActual(12), 
-              tiempoPorHora(15.0f),  
-              acumuladorHora(0.0f), 
-              juegoTerminado(false), 
-              victoria(false), 
-              tiempoMuerteAcumulado(0.0f),
-              anchoVirtualOficina(1640.0f) { // Espacio panorámico ideal para que funcione el paneo
+    Motor() : ventana(),
+              vistaOficina(),
+              vistaInterfaz(),
+              posicionCamaraX(0.0f),
+              velocidadCamara(600.0f),
+              anchoVirtualOficina(1640.0f),
+              visualPuertaIzquierda(),
+              visualPuertaDerecha(),
+              marcoLuzIzquierda(),
+              marcoLuzDerecha(),
+              barraEnergiaFondo(),
+              barraEnergiaFrente(),
+              gobo(12), 
+              director(14), 
+              popy(10), 
+              usher(16), 
+              stub(8),
+              relojEnergia(),
+              relojTerminal(),
+              relojNoche(),
+              horaActual(12),
+              tiempoPorHora(15.0f),
+              acumuladorHora(0.0f),
+              juegoTerminado(false),
+              victoria(false),
+              tiempoMuerteAcumulado(0.0f) { // Espacio panorámico ideal para que funcione el paneo
                   
         std::srand(static_cast<unsigned int>(std::time(nullptr))); 
         
@@ -294,6 +401,9 @@ public:
                 720.0f / static_cast<float>(texturaOficina.getSize().y)
             });
         }
+
+        // Cargar texturas de personajes para las puertas
+        cargarTexturasPersonajesPuerta();
 
         // Configuración visual del medidor de batería
         barraEnergiaFondo.setSize(sf::Vector2f(250.0f, 20.0f));
@@ -334,6 +444,19 @@ public:
         visualPuertaDerecha.setOutlineColor(sf::Color(80, 80, 80));
         visualPuertaDerecha.setOutlineThickness(3.0f);
         visualPuertaDerecha.setPosition(sf::Vector2f(anchoVirtualOficina - 240.0f, 0.0f)); // Extremo derecho absoluto
+
+        // Configuración de marcos de luz de pasillo
+        marcoLuzIzquierda.setSize(sf::Vector2f(220.0f, 400.0f));
+        marcoLuzIzquierda.setFillColor(sf::Color::Transparent);
+        marcoLuzIzquierda.setOutlineColor(sf::Color(200, 200, 100, 100));
+        marcoLuzIzquierda.setOutlineThickness(2.0f);
+        marcoLuzIzquierda.setPosition(sf::Vector2f(10.0f, 160.0f));
+
+        marcoLuzDerecha.setSize(sf::Vector2f(220.0f, 400.0f));
+        marcoLuzDerecha.setFillColor(sf::Color::Transparent);
+        marcoLuzDerecha.setOutlineColor(sf::Color(200, 200, 100, 100));
+        marcoLuzDerecha.setOutlineThickness(2.0f);
+        marcoLuzDerecha.setPosition(sf::Vector2f(anchoVirtualOficina - 230.0f, 160.0f));
 
         relojEnergia.restart();
         relojTerminal.restart();
