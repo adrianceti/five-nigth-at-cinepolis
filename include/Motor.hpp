@@ -5,6 +5,7 @@
 #include <iostream>
 #include <ctime>      
 #include <map>
+#include <filesystem>
 #include "Guardia.hpp"
 #include "MonitorCamaras.hpp"
 #include "Personaje.hpp" 
@@ -61,6 +62,15 @@ private:
     bool victoria;              
     float tiempoMuerteAcumulado;
 
+    bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
+        for (const auto& ruta : rutas) {
+            if (textura.loadFromFile(ruta)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void cargarTexturasPersonajesPuerta() {
         // Cargar sprites de personajes para mostrar en las puertas
         std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
@@ -81,9 +91,13 @@ private:
             };
             
             for (const auto& nombre : nombresPosibles) {
-                if (textura.loadFromFile(rutaBase + nombre)) {
+                std::vector<std::string> rutas = {
+                    rutaBase + nombre,
+                    "../" + rutaBase + nombre
+                };
+                if (cargarTextureDesdeRutas(textura, rutas)) {
                     cargada = true;
-                    std::cerr << "✓ Cargada textura de puerta para " << personajes[i] << " desde " << rutaBase + nombre << std::endl;
+                    std::cerr << "✓ Cargada textura de puerta para " << personajes[i] << " desde " << nombre << std::endl;
                     break;
                 }
             }
@@ -389,7 +403,10 @@ public:
         vistaInterfaz.setSize({1280.0f, 720.0f});
         vistaInterfaz.setCenter({640.0f, 360.0f});
 
-        if (!texturaOficina.loadFromFile("assets/textures/oficina.png")) {
+        if (!cargarTextureDesdeRutas(texturaOficina, {
+            "assets/textures/oficina.png",
+            "../assets/textures/oficina.png"
+        })) {
             std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
         } else {
             spriteOficina.emplace(texturaOficina);
