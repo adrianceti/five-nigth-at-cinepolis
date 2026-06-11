@@ -88,6 +88,21 @@ private:
         return sf::Vector2f(640.f, 360.f);
     }
 
+    bool rutaIncluyeCamara(const std::vector<TipoCamara>& ruta, TipoCamara camara) const {
+        return std::find(ruta.begin(), ruta.end(), camara) != ruta.end();
+    }
+
+    std::string getNombreCamaraCorto(TipoCamara camara) const {
+        switch (camara) {
+            case TipoCamara::CAM_01_DULCERIA:  return "DUL";
+            case TipoCamara::CAM_02_PASILLO_A: return "PAS A";
+            case TipoCamara::CAM_03_PASILLO_B: return "PAS B";
+            case TipoCamara::CAM_04_SALAS:     return "SALAS";
+            case TipoCamara::CAM_05_BANOS:     return "BANOS";
+        }
+        return "?";
+    }
+
     void generarEstatica() const {
         // Genera estática visual en la terminal (simulación de ruido de cámara)
         for (int y = 0; y < 12; y++) {
@@ -305,6 +320,65 @@ public:
     }
 
     // Muestra la estática y la información en la terminal de Windows
+    void dibujarRutaPersonaje(sf::RenderWindow& ventana,
+                              const sf::Font& fuente,
+                              const std::string& nombre,
+                              const std::vector<TipoCamara>& ruta,
+                              TipoCamara posicionActual,
+                              bool enPuerta,
+                              int fila) const {
+        if (!rutaIncluyeCamara(ruta, camaraActual) && posicionActual != camaraActual) {
+            return;
+        }
+
+        float baseX = 24.f;
+        float baseY = 24.f + static_cast<float>(fila) * 58.f;
+        float nodoAncho = 74.f;
+        float nodoAlto = 26.f;
+        float espacio = 12.f;
+
+        sf::RectangleShape fondo({520.f, 46.f});
+        fondo.setPosition({baseX - 10.f, baseY - 8.f});
+        fondo.setFillColor(sf::Color(0, 0, 0, 150));
+        fondo.setOutlineThickness(1.f);
+        fondo.setOutlineColor(posicionActual == camaraActual ? sf::Color(255, 220, 80) : sf::Color(0, 180, 80));
+        ventana.draw(fondo);
+
+        sf::Text etiqueta(fuente, nombre + (enPuerta ? "  PUERTA" : ""), 15);
+        etiqueta.setFillColor(posicionActual == camaraActual ? sf::Color(255, 230, 120) : sf::Color(200, 255, 210));
+        etiqueta.setPosition({baseX, baseY - 4.f});
+        ventana.draw(etiqueta);
+
+        float rutaX = baseX + 145.f;
+        float rutaY = baseY;
+        for (size_t i = 0; i < ruta.size(); i++) {
+            float x = rutaX + static_cast<float>(i) * (nodoAncho + espacio);
+            bool esCamaraActual = ruta[i] == camaraActual;
+            bool estaAqui = ruta[i] == posicionActual && !enPuerta;
+
+            sf::RectangleShape nodo({nodoAncho, nodoAlto});
+            nodo.setPosition({x, rutaY});
+            nodo.setFillColor(estaAqui ? sf::Color(255, 220, 80, 220)
+                                       : esCamaraActual ? sf::Color(30, 120, 70, 210)
+                                                       : sf::Color(10, 35, 20, 210));
+            nodo.setOutlineThickness(1.f);
+            nodo.setOutlineColor(esCamaraActual ? sf::Color(255, 255, 255) : sf::Color(0, 170, 80));
+            ventana.draw(nodo);
+
+            sf::Text textoNodo(fuente, getNombreCamaraCorto(ruta[i]), 13);
+            textoNodo.setFillColor(estaAqui ? sf::Color::Black : sf::Color(220, 255, 220));
+            textoNodo.setPosition({x + 8.f, rutaY + 5.f});
+            ventana.draw(textoNodo);
+
+            if (i + 1 < ruta.size()) {
+                sf::RectangleShape conector({espacio, 2.f});
+                conector.setPosition({x + nodoAncho, rutaY + nodoAlto / 2.f});
+                conector.setFillColor(sf::Color(0, 170, 80));
+                ventana.draw(conector);
+            }
+        }
+    }
+
     void mostrarEnTerminal() const {
         #ifdef _WIN32
             std::system("cls");
