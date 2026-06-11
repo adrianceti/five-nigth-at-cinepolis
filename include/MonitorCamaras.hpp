@@ -237,16 +237,16 @@ public:
 
     // Dibuja la interfaz del monitor sobre la ventana
     void renderizar(sf::RenderWindow& ventana) {
-        ventana.draw(cajaMapa);
+        sf::Vector2f pantalla = tamanoPantalla();
         
         // Dibujar fondo de la cámara (textura o color)
         if (texturasFondo.find(camaraActual) != texturasFondo.end()) {
             // Si existe textura, dibujarla
             sf::Sprite fondoSprite(texturasFondo.at(camaraActual));
-            fondoSprite.setPosition(sf::Vector2f(870.f, 110.f));
+            fondoSprite.setPosition(sf::Vector2f(0.f, 0.f));
             // Escalar para que quepa en el monitor (360x480)
-            float escalaX = 360.0f / texturasFondo.at(camaraActual).getSize().x;
-            float escalaY = 480.0f / texturasFondo.at(camaraActual).getSize().y;
+            float escalaX = pantalla.x / texturasFondo.at(camaraActual).getSize().x;
+            float escalaY = pantalla.y / texturasFondo.at(camaraActual).getSize().y;
             fondoSprite.setScale({escalaX, escalaY});
             ventana.draw(fondoSprite);
         } else {
@@ -255,19 +255,21 @@ public:
                 ? colorFondoFallback.at(camaraActual)
                 : sf::Color(40, 60, 30);
             
-            sf::RectangleShape fondoMonitor(sf::Vector2f(360.f, 480.f));
+            sf::RectangleShape fondoMonitor(pantalla);
             fondoMonitor.setFillColor(colorFondo);
-            fondoMonitor.setPosition(sf::Vector2f(870.f, 110.f));
+            fondoMonitor.setPosition(sf::Vector2f(0.f, 0.f));
             ventana.draw(fondoMonitor);
         }
         
         // Dibuja líneas horizontales (efecto de scanlines)
-        for (float y = 110.0f; y < 600.0f; y += 20.0f) {
-            sf::RectangleShape linea({360.0f, 1.0f});
-            linea.setPosition({860.0f, y});
-            linea.setFillColor(sf::Color(0, 100, 0));
+        for (float y = 0.0f; y < pantalla.y; y += 20.0f) {
+            sf::RectangleShape linea({pantalla.x, 1.0f});
+            linea.setPosition({0.0f, y});
+            linea.setFillColor(sf::Color(0, 80, 0, 120));
             ventana.draw(linea);
         }
+
+        ventana.draw(cajaMapa);
     }
 
 private:
@@ -287,10 +289,17 @@ private:
 public:
     // Dibuja un personaje específico en el monitor en la posición central
     void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre) {
-        if (spritesPersonajes.find(nombre) != spritesPersonajes.end()) {
-            sf::Sprite sprite = spritesPersonajes.at(nombre);
-            // Posicionar en centro del monitor
-            sprite.setPosition(sf::Vector2f(920.f, 280.f));
+        auto textura = texturasPersonajes.find(nombre);
+        if (textura != texturasPersonajes.end()) {
+            sf::Sprite sprite(textura->second);
+            const auto tam = textura->second.getSize();
+            float escalaX = 420.f / static_cast<float>(tam.x);
+            float escalaY = 560.f / static_cast<float>(tam.y);
+            float escala = std::min(escalaX, escalaY);
+
+            sprite.setScale({escala, escala});
+            sprite.setOrigin({static_cast<float>(tam.x) / 2.f, static_cast<float>(tam.y) / 2.f});
+            sprite.setPosition(centroPantalla() + sf::Vector2f(0.f, 60.f));
             ventana.draw(sprite);
         }
     }
