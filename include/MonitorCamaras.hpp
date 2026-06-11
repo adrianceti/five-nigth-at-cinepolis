@@ -160,6 +160,78 @@ private:
         ventana.draw(sprite);
     }
 
+    void obtenerPlanoPersonaje(const std::string& nombre, sf::Vector2f& posicion, sf::Vector2f& maximo) const {
+        std::string clave = getClaveTexturaPersonaje(nombre);
+        posicion = {640.f, 610.f};
+        maximo = {360.f, 520.f};
+
+        if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
+            if (clave == "Gobo") {
+                posicion = {230.f, 620.f};
+                maximo = {230.f, 330.f};
+            } else if (clave == "Director") {
+                posicion = {650.f, 640.f};
+                maximo = {410.f, 590.f};
+            } else if (clave == "Popy") {
+                posicion = {1040.f, 625.f};
+                maximo = {250.f, 360.f};
+            } else if (clave == "TheUsher") {
+                posicion = {1110.f, 300.f};
+                maximo = {210.f, 280.f};
+            } else if (clave == "TicketyStub") {
+                posicion = {90.f, 650.f};
+                maximo = {170.f, 230.f};
+            }
+            return;
+        }
+
+        if (camaraActual == TipoCamara::CAM_02_PASILLO_A) {
+            if (clave == "TicketyStub") {
+                posicion = {360.f, 645.f};
+                maximo = {290.f, 420.f};
+            } else if (clave == "Director") {
+                posicion = {650.f, 650.f};
+                maximo = {360.f, 520.f};
+            } else {
+                posicion = {840.f, 650.f};
+                maximo = {330.f, 480.f};
+            }
+            return;
+        }
+
+        if (camaraActual == TipoCamara::CAM_03_PASILLO_B) {
+            if (clave == "Popy") {
+                posicion = {900.f, 650.f};
+                maximo = {360.f, 520.f};
+            } else {
+                posicion = {520.f, 650.f};
+                maximo = {330.f, 470.f};
+            }
+            return;
+        }
+
+        if (camaraActual == TipoCamara::CAM_04_SALAS) {
+            if (clave == "Gobo") {
+                posicion = {470.f, 640.f};
+                maximo = {330.f, 470.f};
+            } else {
+                posicion = {820.f, 640.f};
+                maximo = {330.f, 470.f};
+            }
+            return;
+        }
+
+        if (camaraActual == TipoCamara::CAM_05_BANOS) {
+            if (clave == "Popy") {
+                posicion = {820.f, 645.f};
+                maximo = {340.f, 500.f};
+            } else {
+                posicion = {520.f, 645.f};
+                maximo = {320.f, 460.f};
+            }
+        }
+    }
+
     void generarEstatica() const {
         // Genera estática visual en la terminal (simulación de ruido de cámara)
         for (int y = 0; y < 12; y++) {
@@ -361,17 +433,40 @@ private:
 public:
     // Dibuja un personaje específico en el monitor en la posición central
     void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre) {
-        auto textura = texturasPersonajes.find(nombre);
+        auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
+        sf::Texture texturaTemporal;
+        const sf::Texture* texturaParaDibujar = nullptr;
+
         if (textura != texturasPersonajes.end()) {
-            sf::Sprite sprite(textura->second);
-            const auto tam = textura->second.getSize();
-            float escalaX = 420.f / static_cast<float>(tam.x);
-            float escalaY = 560.f / static_cast<float>(tam.y);
+            texturaParaDibujar = &textura->second;
+        } else {
+            std::string carpeta = getCarpetaPersonaje(nombre);
+            if (!carpeta.empty()) {
+                std::vector<std::string> rutas = {
+                    "assets/textures/personajes/" + carpeta,
+                    "../assets/textures/personajes/" + carpeta
+                };
+
+                if (cargarPrimeraImagenEnCarpeta(texturaTemporal, rutas)) {
+                    texturaParaDibujar = &texturaTemporal;
+                }
+            }
+        }
+
+        if (texturaParaDibujar != nullptr) {
+            sf::Sprite sprite(*texturaParaDibujar);
+            const auto tam = texturaParaDibujar->getSize();
+            sf::Vector2f posicion;
+            sf::Vector2f maximo;
+            obtenerPlanoPersonaje(nombre, posicion, maximo);
+
+            float escalaX = maximo.x / static_cast<float>(tam.x);
+            float escalaY = maximo.y / static_cast<float>(tam.y);
             float escala = std::min(escalaX, escalaY);
 
             sprite.setScale({escala, escala});
-            sprite.setOrigin({static_cast<float>(tam.x) / 2.f, static_cast<float>(tam.y) / 2.f});
-            sprite.setPosition(centroPantalla() + sf::Vector2f(0.f, 60.f));
+            sprite.setOrigin({static_cast<float>(tam.x) / 2.f, static_cast<float>(tam.y)});
+            sprite.setPosition(posicion);
             ventana.draw(sprite);
         }
     }
