@@ -6,9 +6,19 @@
 #include <ctime>      
 #include <map>
 #include <filesystem>
+#include <vector>
+#include <algorithm>
 #include "Guardia.hpp"
 #include "MonitorCamaras.hpp"
 #include "Personaje.hpp" 
+
+enum class EstadoJuego {
+    Jugando,
+    AtaquePendiente,
+    Jumpscare,
+    GameOver,
+    Victoria
+};
 
 class Motor {
 private:
@@ -16,6 +26,8 @@ private:
 
     sf::Texture texturaOficina;
     std::optional<sf::Sprite> spriteOficina;
+    sf::Font fuenteUI;
+    bool fuenteUICargada;
 
     // Control de Cámara (Vista)
     sf::View vistaOficina;
@@ -31,6 +43,7 @@ private:
     // Sistema de iluminación de pasillos (sprites y texturas)
     std::map<std::string, sf::Texture> texturasPersonajesPuerta;
     std::map<std::string, sf::Sprite> spritesPersonajesPuerta;
+    std::map<std::string, sf::Texture> texturasJumpscare;
     sf::RectangleShape marcoLuzIzquierda;
     sf::RectangleShape marcoLuzDerecha;
 
@@ -52,15 +65,19 @@ private:
     // Relojes de control
     sf::Clock relojEnergia;
     sf::Clock relojTerminal;
+    sf::Clock relojEstado;
     
     // Control del Tiempo y Victoria
     sf::Clock relojNoche;
+    EstadoJuego estadoJuego;
     int horaActual;             
     float tiempoPorHora;        
     float acumuladorHora;       
     bool juegoTerminado;
     bool victoria;              
     float tiempoMuerteAcumulado;
+    float retrasoAtaque;
+    std::string atacanteActual;
 
     bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
         for (const auto& ruta : rutas) {
@@ -69,6 +86,124 @@ private:
             }
         }
         return false;
+    }
+
+    bool cargarFuenteDesdeRutas(sf::Font& fuente, const std::vector<std::string>& rutas) {
+        for (const auto& ruta : rutas) {
+            if (fuente.openFromFile(ruta)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool cargarPrimerPngEnCarpeta(sf::Texture& textura, const std::vector<std::string>& carpetas) {
+        for (const auto& carpeta : carpetas) {
+            std::filesystem::path rutaCarpeta(carpeta);
+            if (!std::filesystem::exists(rutaCarpeta) || !std::filesystem::is_directory(rutaCarpeta)) {
+                continue;
+            }
+
+            for (const auto& entrada : std::filesystem::directory_iterator(rutaCarpeta)) {
+                if (!entrada.is_regular_file() || entrada.path().extension() != ".png") {
+                    continue;
+                }
+
+                if (textura.loadFromFile(entrada.path().string())) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    void cargarTexturasJumpscare() {
+        std::vector<std::pair<std::string, std::string>> personajes = {
+            {"Gobo", "gobo"},
+            {"Director", "director"},
+            {"Popy", "popy"},
+            {"The Usher", "theusher"},
+            {"Tickety Stub", "ticketystub"}
+        };
+
+        for (const auto& personaje : personajes) {
+            sf::Texture textura;
+            std::vector<std::string> carpetas = {
+                "assets/textures/personajes/" + personaje.second,
+                "../assets/textures/personajes/" + personaje.second,
+                "assets/textures/personajes/" + personaje.second + "/sprite" + personaje.second,
+                "../assets/textures/personajes/" + personaje.second + "/sprite" + personaje.second
+            };
+
+            if (cargarPrimerPngEnCarpeta(textura, carpetas)) {
+                texturasJumpscare.insert({personaje.first, textura});
+                std::cerr << "✓ Cargado jumpscare de " << personaje.first << std::endl;
+            } else {
+                std::cerr << "⚠ No se encontró jumpscare para " << personaje.first << std::endl;
+            }
+        }
+    }
+
+    void iniciarAtaque(const std::string& nombreAtacante) {
+        if (estadoJuego != EstadoJuego::Jugando) {
+            return;
+        }
+
+        atacanteActual = nombreAtacante;
+        retrasoAtaque = 1.0f + (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * 2.0f;
+        estadoJuego = EstadoJuego::AtaquePendiente;
+        relojEstado.restart();
+        std::cerr << "[ATAQUE] " << atacanteActual << " entro. Jumpscare en "
+                  << retrasoAtaque << " segundos." << std::endl;
+    }
+
+    void iniciarJumpscare() {
+        estadoJuego = EstadoJuego::Jumpscare;
+        juegoTerminado = true;
+        victoria = false;
+        relojEstado.restart();
+    }
+
+    void pasarAGameOver() {
+        estadoJuego = EstadoJuego::GameOver;
+        relojEstado.restart();
+    }
+
+    void resetearPartida() {
+        jugador.resetear();
+        gobo.resetear();
+        director.resetear();
+        popy.resetear();
+        usher.resetear();
+        stub.resetear();
+
+        horaActual = 12;
+        acumuladorHora = 0.0f;
+        juegoTerminado = false;
+        victoria = false;
+        tiempoMuerteAcumulado = 0.0f;
+        retrasoAtaque = 0.0f;
+        atacanteActual.clear();
+        estadoJuego = EstadoJuego::Jugando;
+
+        posicionCamaraX = anchoVirtualOficina / 2.0f;
+        vistaOficina.setCenter({posicionCamaraX, 360.0f});
+        barraEnergiaFrente.setSize(sf::Vector2f(250.0f, 20.0f));
+        barraEnergiaFrente.setFillColor(sf::Color::Green);
+
+        for (int i = 0; i < 6; i++) {
+            bloquesReloj[i].setFillColor(sf::Color(45, 45, 50));
+        }
+
+        if (spriteOficina.has_value()) {
+            spriteOficina.value().setColor(sf::Color::White);
+        }
+
+        relojEnergia.restart();
+        relojTerminal.restart();
+        relojNoche.restart();
+        relojEstado.restart();
     }
 
     void cargarTexturasPersonajesPuerta() {
@@ -119,9 +254,18 @@ private:
                 ventana.close();
             }
 
-            if (juegoTerminado || victoria) return;
-
             if (const auto* botonPresionado = evento->getIf<sf::Event::KeyPressed>()) {
+                if (estadoJuego == EstadoJuego::GameOver) {
+                    if (botonPresionado->code == sf::Keyboard::Key::R) {
+                        resetearPartida();
+                    }
+                    continue;
+                }
+
+                if (estadoJuego == EstadoJuego::Jumpscare || estadoJuego == EstadoJuego::Victoria) {
+                    continue;
+                }
+
                 if (botonPresionado->code == sf::Keyboard::Key::A) {
                     jugador.alternarPuertaIzquierda();
                 }
@@ -155,12 +299,37 @@ private:
     void actualizar() {
         float dt = relojEnergia.restart().asSeconds();
 
-        if (juegoTerminado || victoria) {
-            tiempoMuerteAcumulado += dt;
-            if (tiempoMuerteAcumulado >= 5.0f) { 
-                ventana.close();
+        if (estadoJuego == EstadoJuego::Jumpscare) {
+            if (relojEstado.getElapsedTime().asSeconds() >= 2.5f) {
+                pasarAGameOver();
             }
-            return; 
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::GameOver || estadoJuego == EstadoJuego::Victoria) {
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::AtaquePendiente) {
+            if (relojEstado.getElapsedTime().asSeconds() >= retrasoAtaque) {
+                iniciarJumpscare();
+                return;
+            }
+
+            if (!jugador.esMonitorAbierto()) {
+                sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
+                
+                if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
+                    if (posicionMouse.x > 1000) posicionCamaraX += velocidadCamara * dt;
+                    else if (posicionMouse.x < 280) posicionCamaraX -= velocidadCamara * dt;
+
+                    if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
+                    if (posicionCamaraX > (anchoVirtualOficina - 640.0f)) posicionCamaraX = anchoVirtualOficina - 640.0f; 
+
+                    vistaOficina.setCenter({posicionCamaraX, 360.0f});
+                }
+            }
+            return;
         }
 
         // Lógica del Tiempo de la Noche
@@ -172,6 +341,7 @@ private:
 
             if (horaActual == 6) {
                 victoria = true;
+                estadoJuego = EstadoJuego::Victoria;
                 tiempoMuerteAcumulado = 0.0f;
                 return;
             }
@@ -187,10 +357,24 @@ private:
         stub.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
 
         // Verificar si algún personaje logró entrar
-        if (gobo.esEstaAdentro() || director.esEstaAdentro() || popy.esEstaAdentro() || 
-            usher.esEstaAdentro() || stub.esEstaAdentro()) {
-            juegoTerminado = true;
-            tiempoMuerteAcumulado = 0.0f;
+        if (gobo.esEstaAdentro()) {
+            iniciarAtaque(gobo.getNombre());
+            return;
+        }
+        if (director.esEstaAdentro()) {
+            iniciarAtaque(director.getNombre());
+            return;
+        }
+        if (popy.esEstaAdentro()) {
+            iniciarAtaque(popy.getNombre());
+            return;
+        }
+        if (usher.esEstaAdentro()) {
+            iniciarAtaque(usher.getNombre());
+            return;
+        }
+        if (stub.esEstaAdentro()) {
+            iniciarAtaque(stub.getNombre());
             return;
         }
 
@@ -269,16 +453,97 @@ private:
         }
     }
 
+    void dibujarTexturaPantallaCompleta(sf::Texture& textura) {
+        ventana.setView(vistaInterfaz);
+        sf::Sprite sprite(textura);
+        const auto tamTextura = textura.getSize();
+        float escalaX = 1280.0f / static_cast<float>(tamTextura.x);
+        float escalaY = 720.0f / static_cast<float>(tamTextura.y);
+        float escala = std::max(escalaX, escalaY);
+        sprite.setScale({escala, escala});
+        sprite.setPosition({
+            (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
+            (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
+        });
+        ventana.draw(sprite);
+    }
+
+    void renderizarJumpscare() {
+        ventana.clear(sf::Color::Black);
+        auto textura = texturasJumpscare.find(atacanteActual);
+        if (textura != texturasJumpscare.end()) {
+            dibujarTexturaPantallaCompleta(textura->second);
+        } else {
+            sf::RectangleShape fondo(sf::Vector2f(1280.0f, 720.0f));
+            fondo.setFillColor(sf::Color(120, 0, 0));
+            ventana.setView(vistaInterfaz);
+            ventana.draw(fondo);
+        }
+        ventana.display();
+    }
+
+    void renderizarGameOver() {
+        ventana.clear(sf::Color::Black);
+        ventana.setView(vistaInterfaz);
+
+        for (int y = 0; y < 720; y += 12) {
+            sf::RectangleShape linea(sf::Vector2f(1280.0f, 4.0f));
+            linea.setPosition({0.0f, static_cast<float>(y)});
+            int brillo = 20 + (std::rand() % 55);
+            linea.setFillColor(sf::Color(brillo, 0, 0));
+            ventana.draw(linea);
+        }
+
+        sf::RectangleShape panel(sf::Vector2f(620.0f, 170.0f));
+        panel.setPosition({330.0f, 265.0f});
+        panel.setFillColor(sf::Color(10, 10, 10, 230));
+        panel.setOutlineColor(sf::Color(160, 0, 0));
+        panel.setOutlineThickness(4.0f);
+        ventana.draw(panel);
+
+        // Texto dibujado como bloques para evitar depender de una fuente externa.
+        sf::RectangleShape barra(sf::Vector2f(460.0f, 18.0f));
+        barra.setFillColor(sf::Color(190, 0, 0));
+        barra.setPosition({410.0f, 315.0f});
+        ventana.draw(barra);
+        barra.setPosition({410.0f, 365.0f});
+        ventana.draw(barra);
+
+        sf::RectangleShape reinicio(sf::Vector2f(280.0f, 12.0f));
+        reinicio.setFillColor(sf::Color(220, 220, 220));
+        reinicio.setPosition({500.0f, 405.0f});
+        ventana.draw(reinicio);
+
+        if (fuenteUICargada) {
+            sf::Text titulo(fuenteUI, "GAME OVER", 84);
+            titulo.setFillColor(sf::Color(220, 20, 20));
+            titulo.setStyle(sf::Text::Bold);
+            titulo.setPosition({405.0f, 285.0f});
+            ventana.draw(titulo);
+
+            sf::Text instruccion(fuenteUI, "Presiona R para reiniciar", 30);
+            instruccion.setFillColor(sf::Color(230, 230, 230));
+            instruccion.setPosition({460.0f, 390.0f});
+            ventana.draw(instruccion);
+        }
+
+        ventana.display();
+    }
+
     void renderizar() {
-        if (victoria) {
+        if (estadoJuego == EstadoJuego::Victoria) {
             ventana.clear(sf::Color(20, 80, 20)); 
             ventana.display();
             return;
         }
 
-        if (juegoTerminado) {
-            ventana.clear(sf::Color::Red); 
-            ventana.display();
+        if (estadoJuego == EstadoJuego::Jumpscare) {
+            renderizarJumpscare();
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::GameOver) {
+            renderizarGameOver();
             return;
         }
 
@@ -380,7 +645,9 @@ public:
               stub(8),
               relojEnergia(),
               relojTerminal(),
+              relojEstado(),
               relojNoche(),
+              estadoJuego(EstadoJuego::Jugando),
               horaActual(12),
               tiempoPorHora(120.0f),  // Cada hora dura 120 segundos (2 minutos) - Total: ~12 minutos para 6 noches
               acumuladorHora(0.0f),
@@ -389,6 +656,14 @@ public:
               tiempoMuerteAcumulado(0.0f) { // Espacio panorámico ideal para que funcione el paneo
                   
         std::srand(static_cast<unsigned int>(std::time(nullptr))); 
+        retrasoAtaque = 0.0f;
+        atacanteActual.clear();
+        fuenteUICargada = cargarFuenteDesdeRutas(fuenteUI, {
+            "assets/fonts/arial.ttf",
+            "../assets/fonts/arial.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+            "C:/Windows/Fonts/segoeui.ttf"
+        });
         
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
@@ -421,6 +696,7 @@ public:
 
         // Cargar texturas de personajes para las puertas
         cargarTexturasPersonajesPuerta();
+        cargarTexturasJumpscare();
 
         // Configuración visual del medidor de batería
         barraEnergiaFondo.setSize(sf::Vector2f(250.0f, 20.0f));
@@ -478,6 +754,7 @@ public:
         relojEnergia.restart();
         relojTerminal.restart();
         relojNoche.restart();
+        relojEstado.restart();
     }
 
     ~Motor() {}
