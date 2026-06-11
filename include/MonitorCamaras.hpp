@@ -7,6 +7,8 @@
 #include <map>
 #include <vector>
 #include <filesystem>
+#include <cctype>
+#include <algorithm>
 
 // Enumerado para las distintas zonas de Cinépolis
 enum class TipoCamara {
@@ -42,6 +44,50 @@ private:
         return false;
     }
 
+    bool esImagenSoportada(const std::filesystem::path& ruta) const {
+        if (!ruta.has_extension()) {
+            return false;
+        }
+
+        std::string extension = ruta.extension().string();
+        std::transform(extension.begin(), extension.end(), extension.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        return extension == ".png" ||
+               extension == ".jpg" ||
+               extension == ".jpeg" ||
+               extension == ".bmp";
+    }
+
+    bool cargarPrimeraImagenEnCarpeta(sf::Texture& textura, const std::vector<std::string>& carpetas) {
+        for (const auto& carpeta : carpetas) {
+            std::filesystem::path rutaCarpeta(carpeta);
+            if (!std::filesystem::exists(rutaCarpeta) || !std::filesystem::is_directory(rutaCarpeta)) {
+                continue;
+            }
+
+            for (const auto& entrada : std::filesystem::recursive_directory_iterator(rutaCarpeta)) {
+                if (!entrada.is_regular_file() || !esImagenSoportada(entrada.path())) {
+                    continue;
+                }
+
+                if (textura.loadFromFile(entrada.path().u8string())) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    sf::Vector2f tamanoPantalla() const {
+        return sf::Vector2f(1280.f, 720.f);
+    }
+
+    sf::Vector2f centroPantalla() const {
+        return sf::Vector2f(640.f, 360.f);
+    }
+
     void generarEstatica() const {
         // Genera estática visual en la terminal (simulación de ruido de cámara)
         for (int y = 0; y < 12; y++) {
@@ -60,26 +106,22 @@ private:
 
     void cargarTexturasFondo() {
         // Intentar cargar fondos de cámaras desde assets/textures/camaras/
-        std::vector<std::pair<TipoCamara, std::string>> camaras = {
-            {TipoCamara::CAM_01_DULCERIA, "dulceria.png"},
-            {TipoCamara::CAM_02_PASILLO_A, "pasillo_a.png"},
-            {TipoCamara::CAM_03_PASILLO_B, "pasillo_b.png"},
-            {TipoCamara::CAM_04_SALAS, "sala.png"},
-            {TipoCamara::CAM_05_BANOS, "banos.png"}
+        std::vector<std::pair<TipoCamara, std::vector<std::string>>> camaras = {
+            {TipoCamara::CAM_01_DULCERIA, {"assets/textures/camaras/dulceria", "../assets/textures/camaras/dulceria"}},
+            {TipoCamara::CAM_02_PASILLO_A, {"assets/textures/camaras/pasillo-a", "../assets/textures/camaras/pasillo-a", "assets/textures/camaras/pasillo_a", "../assets/textures/camaras/pasillo_a"}},
+            {TipoCamara::CAM_03_PASILLO_B, {"assets/textures/camaras/pasillo-b", "../assets/textures/camaras/pasillo-b", "assets/textures/camaras/pasillo_b", "../assets/textures/camaras/pasillo_b"}},
+            {TipoCamara::CAM_04_SALAS, {"assets/textures/camaras/sala1", "../assets/textures/camaras/sala1", "assets/textures/camaras/sala2", "../assets/textures/camaras/sala2"}},
+            {TipoCamara::CAM_05_BANOS, {"assets/textures/camaras/baños", "../assets/textures/camaras/baños", "assets/textures/camaras/banos", "../assets/textures/camaras/banos", "assets/textures/camaras/lobby", "../assets/textures/camaras/lobby"}}
         };
         
         for (const auto& camara : camaras) {
             sf::Texture textura;
-            std::vector<std::string> rutas = {
-                "assets/textures/camaras/" + camara.second,
-                "../assets/textures/camaras/" + camara.second
-            };
             
-            if (cargarTextureDesdeRutas(textura, rutas)) {
+            if (cargarPrimeraImagenEnCarpeta(textura, camara.second)) {
                 texturasFondo[camara.first] = textura;
-                std::cerr << "✓ Cargado fondo de cámara desde " << camara.second << std::endl;
+                std::cerr << "✓ Cargado fondo de cámara" << std::endl;
             } else {
-                std::cerr << "⚠ No se encontró " << camara.second << " - usando color de fallback" << std::endl;
+                std::cerr << "⚠ No se encontró fondo de cámara - usando color de fallback" << std::endl;
             }
         }
         
@@ -144,11 +186,11 @@ public:
           distribucionEstadistica(0, 100) {
         
         // Creamos un rectángulo con marco verde retro
-        cajaMapa.setSize(sf::Vector2f(380.f, 520.f));
-        cajaMapa.setFillColor(sf::Color(10, 40, 10, 230)); // Verde oscuro semi-transparente
+        cajaMapa.setSize(tamanoPantalla());
+        cajaMapa.setFillColor(sf::Color(0, 0, 0, 0));
         cajaMapa.setOutlineColor(sf::Color(0, 255, 0));
-        cajaMapa.setOutlineThickness(3.f);
-        cajaMapa.setPosition(sf::Vector2f(850.f, 90.f)); // Esquina derecha de la pantalla
+        cajaMapa.setOutlineThickness(2.f);
+        cajaMapa.setPosition(sf::Vector2f(0.f, 0.f));
         
         // Cargar texturas y fondos
         cargarTexturasFondo();
