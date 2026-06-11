@@ -43,6 +43,16 @@ public:
         actualizarConsumo();
     }
 
+    void resetear() {
+        energia = 100.0f;
+        puertaIzquierda = false;
+        puertaDerecha = false;
+        monitorAbierto = false;
+        luzIzquierda = false;
+        luzDerecha = false;
+        actualizarConsumo();
+    }
+
     // Lógica por ciclo de juego
     void bajarEnergia(float tiempoTranscurrido) {
         if (energia > 0.0f) {
