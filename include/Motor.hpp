@@ -595,6 +595,29 @@ private:
             if (popy.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Popy");
             if (usher.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TheUsher");
             if (stub.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TicketyStub");
+
+            if (fuenteUICargada) {
+                monitor.dibujarRutaPersonaje(
+                    ventana, fuenteUI, "Gobo",
+                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_02_PASILLO_A},
+                    gobo.getPosicionActual(), gobo.esEnLaPuerta(), 0);
+                monitor.dibujarRutaPersonaje(
+                    ventana, fuenteUI, "Director",
+                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_03_PASILLO_B, TipoCamara::CAM_02_PASILLO_A},
+                    director.getPosicionActual(), director.esEnLaPuerta(), 1);
+                monitor.dibujarRutaPersonaje(
+                    ventana, fuenteUI, "Popy",
+                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_03_PASILLO_B},
+                    popy.getPosicionActual(), popy.esEnLaPuerta(), 2);
+                monitor.dibujarRutaPersonaje(
+                    ventana, fuenteUI, "The Usher",
+                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_02_PASILLO_A},
+                    usher.getPosicionActual(), usher.esEnLaPuerta(), 3);
+                monitor.dibujarRutaPersonaje(
+                    ventana, fuenteUI, "Tickety Stub",
+                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_02_PASILLO_A},
+                    stub.getPosicionActual(), stub.esEnLaPuerta(), 4);
+            }
         } else {
             ventana.draw(barraEnergiaFondo);
             ventana.draw(barraEnergiaFrente);
