@@ -103,6 +103,34 @@ private:
         return "?";
     }
 
+    std::string getClaveTexturaPersonaje(const std::string& nombre) const {
+        if (nombre == "The Usher") {
+            return "TheUsher";
+        }
+        if (nombre == "Tickety Stub") {
+            return "TicketyStub";
+        }
+        return nombre;
+    }
+
+    void dibujarMiniaturaPersonaje(sf::RenderWindow& ventana, const std::string& nombre, sf::Vector2f centro) const {
+        auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
+        if (textura == texturasPersonajes.end()) {
+            return;
+        }
+
+        sf::Sprite sprite(textura->second);
+        const auto tam = textura->second.getSize();
+        float escalaX = 54.f / static_cast<float>(tam.x);
+        float escalaY = 54.f / static_cast<float>(tam.y);
+        float escala = std::min(escalaX, escalaY);
+
+        sprite.setScale({escala, escala});
+        sprite.setOrigin({static_cast<float>(tam.x) / 2.f, static_cast<float>(tam.y) / 2.f});
+        sprite.setPosition(centro + sf::Vector2f(0.f, -24.f));
+        ventana.draw(sprite);
+    }
+
     void generarEstatica() const {
         // Genera estática visual en la terminal (simulación de ruido de cámara)
         for (int y = 0; y < 12; y++) {
@@ -369,6 +397,10 @@ public:
             textoNodo.setFillColor(estaAqui ? sf::Color::Black : sf::Color(220, 255, 220));
             textoNodo.setPosition({x + 8.f, rutaY + 5.f});
             ventana.draw(textoNodo);
+
+            if (estaAqui) {
+                dibujarMiniaturaPersonaje(ventana, nombre, {x + nodoAncho / 2.f, rutaY});
+            }
 
             if (i + 1 < ruta.size()) {
                 sf::RectangleShape conector({espacio, 2.f});
