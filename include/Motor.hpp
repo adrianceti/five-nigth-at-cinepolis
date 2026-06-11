@@ -141,7 +141,7 @@ private:
         if (cargarBufferAudio("ambiente", {base + "ambiente_tenebroso.wav", baseAlterna + "ambiente_tenebroso.wav"})) {
             sonidoAmbiente.emplace(buffersAudio.at("ambiente"));
             sonidoAmbiente->setLooping(true);
-            sonidoAmbiente->setVolume(55.0f);
+            sonidoAmbiente->setVolume(82.0f);
             sonidoAmbiente->play();
         } else {
             audioDisponible = false;
@@ -224,7 +224,7 @@ private:
         retrasoAtaque = 1.0f + (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * 2.0f;
         estadoJuego = EstadoJuego::AtaquePendiente;
         relojEstado.restart();
-        reproducirSonido("ataque", 62.0f);
+        reproducirSonido("ataque", 42.0f);
         std::cerr << "[ATAQUE] " << atacanteActual << " entro. Jumpscare en "
                   << retrasoAtaque << " segundos." << std::endl;
     }
@@ -234,13 +234,13 @@ private:
         juegoTerminado = true;
         victoria = false;
         relojEstado.restart();
-        reproducirSonido("jumpscare", 78.0f);
+        reproducirSonido("jumpscare", 86.0f);
     }
 
     void pasarAGameOver() {
         estadoJuego = EstadoJuego::GameOver;
         relojEstado.restart();
-        reproducirSonido("gameover", 62.0f);
+        reproducirSonido("gameover", 46.0f);
     }
 
     void resetearPartida() {
@@ -345,34 +345,34 @@ private:
 
                 if (botonPresionado->code == sf::Keyboard::Key::A) {
                     jugador.alternarPuertaIzquierda();
-                    reproducirSonido("puerta", 54.0f);
+                    reproducirSonido("puerta", 34.0f);
                 }
                 if (botonPresionado->code == sf::Keyboard::Key::D) {
                     jugador.alternarPuertaDerecha();
-                    reproducirSonido("puerta", 54.0f);
+                    reproducirSonido("puerta", 34.0f);
                 }
                 
                 if (botonPresionado->code == sf::Keyboard::Key::Space) {
                     jugador.alternarMonitor();
-                    reproducirSonido("monitor", 44.0f);
+                    reproducirSonido("monitor", 26.0f);
                 }
 
                 // Luces de pasillo - Q para izquierda, E para derecha
                 if (botonPresionado->code == sf::Keyboard::Key::Q) {
                     jugador.alternarLuzIzquierda();
-                    reproducirSonido("luz", 38.0f);
+                    reproducirSonido("luz", 24.0f);
                 }
                 if (botonPresionado->code == sf::Keyboard::Key::E) {
                     jugador.alternarLuzDerecha();
-                    reproducirSonido("luz", 38.0f);
+                    reproducirSonido("luz", 24.0f);
                 }
 
                 if (jugador.esMonitorAbierto()) {
-                    if (botonPresionado->code == sf::Keyboard::Key::Num1) { monitor.cambiarCamara(TipoCamara::CAM_01_DULCERIA); reproducirSonido("camara", 36.0f); }
-                    if (botonPresionado->code == sf::Keyboard::Key::Num2) { monitor.cambiarCamara(TipoCamara::CAM_02_PASILLO_A); reproducirSonido("camara", 36.0f); }
-                    if (botonPresionado->code == sf::Keyboard::Key::Num3) { monitor.cambiarCamara(TipoCamara::CAM_03_PASILLO_B); reproducirSonido("camara", 36.0f); }
-                    if (botonPresionado->code == sf::Keyboard::Key::Num4) { monitor.cambiarCamara(TipoCamara::CAM_04_SALAS); reproducirSonido("camara", 36.0f); }
-                    if (botonPresionado->code == sf::Keyboard::Key::Num5) { monitor.cambiarCamara(TipoCamara::CAM_05_BANOS); reproducirSonido("camara", 36.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num1) { monitor.cambiarCamara(TipoCamara::CAM_01_DULCERIA); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num2) { monitor.cambiarCamara(TipoCamara::CAM_02_PASILLO_A); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num3) { monitor.cambiarCamara(TipoCamara::CAM_03_PASILLO_B); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num4) { monitor.cambiarCamara(TipoCamara::CAM_04_SALAS); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num5) { monitor.cambiarCamara(TipoCamara::CAM_05_BANOS); reproducirSonido("camara", 24.0f); }
                 }
             }
         }
@@ -425,7 +425,7 @@ private:
                 victoria = true;
                 estadoJuego = EstadoJuego::Victoria;
                 tiempoMuerteAcumulado = 0.0f;
-                reproducirSonido("victoria", 82.0f);
+                reproducirSonido("victoria", 42.0f);
                 return;
             }
         }
