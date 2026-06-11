@@ -23,8 +23,12 @@ public:
 
     virtual ~Personaje() = default;
 
-    virtual void actualizarIA(float dt, bool puertaCerrada) {
+    virtual void actualizarIA(float dt, bool puertaCerrada, bool puedeMoverse = true) {
         if (estaAdentro) return;
+
+        if (!puedeMoverse) {
+            return;
+        }
 
         if (estaEnLaPuerta) {
             if (puertaCerrada) {
@@ -40,7 +44,7 @@ public:
         }
 
         tiempoAcumuladoIA += dt;
-        if (tiempoAcumuladoIA >= 5.0f) {
+        if (tiempoAcumuladoIA >= 9.0f) {
             tiempoAcumuladoIA = 0.0f;
             int intento = (std::rand() % 20) + 1;
             if (intento <= dificultad) {

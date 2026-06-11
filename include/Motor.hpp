@@ -86,6 +86,8 @@ private:
     std::vector<sf::Sound> sonidosActivos;
     bool audioDisponible;
     bool introNoche1Reproducido;
+    bool introNoche1Activa;
+    float duracionIntroNoche1;
 
     bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
         for (const auto& ruta : rutas) {
@@ -426,6 +428,12 @@ private:
         if (!introNoche1Reproducido && horaActual == 12) {
             reproducirSonido("intro", 88.0f);
             introNoche1Reproducido = true;
+            introNoche1Activa = true;
+            relojEstado.restart();
+        }
+
+        if (introNoche1Activa && relojEstado.getElapsedTime().asSeconds() >= duracionIntroNoche1) {
+            introNoche1Activa = false;
         }
 
         acumuladorHora += dt;
@@ -446,11 +454,12 @@ private:
         jugador.bajarEnergia(dt);
 
         // Actualizar a todos los personajes
-        gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
-        director.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
-        popy.actualizarIA(dt, jugador.esPuertaDerechaCerrada());
-        usher.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
-        stub.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada());
+        bool puedeMoverIA = !introNoche1Activa;
+        gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA);
+        director.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA);
+        popy.actualizarIA(dt, jugador.esPuertaDerechaCerrada(), puedeMoverIA);
+        usher.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA);
+        stub.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA);
 
         // Verificar si algún personaje logró entrar
         if (gobo.esEstaAdentro()) {
@@ -779,7 +788,8 @@ public:
         atacanteActual.clear();
         audioDisponible = false;
         introNoche1Reproducido = false;
-        introNoche1Reproducido = false;
+        introNoche1Activa = false;
+        duracionIntroNoche1 = 20.0f;
         fuenteUICargada = cargarFuenteDesdeRutas(fuenteUI, {
             "assets/fonts/arial.ttf",
             "../assets/fonts/arial.ttf",
