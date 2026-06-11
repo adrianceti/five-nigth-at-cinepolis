@@ -431,7 +431,7 @@ private:
                 victoria = true;
                 estadoJuego = EstadoJuego::Victoria;
                 tiempoMuerteAcumulado = 0.0f;
-                reproducirSonido("victoria", 42.0f);
+                reproducirSonido("victoria", 78.0f);
                 return;
             }
         }
