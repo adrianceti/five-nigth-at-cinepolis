@@ -27,18 +27,18 @@ all: build
 # Compilar el proyecto
 build: $(EXECUTABLE)
 
+# Compilar el objeto principal
+$(OBJ_DIR)/Main.o: $(SRC_DIR)/Main.cpp $(INCLUDE_DIR)/Juego.hpp $(INCLUDE_DIR)/Motor.hpp $(INCLUDE_DIR)/MonitorCamaras.hpp $(INCLUDE_DIR)/Guardia.hpp $(INCLUDE_DIR)/Personaje.hpp
+	@mkdir -p $(OBJ_DIR)
+	@echo "[COMPILE] Main.cpp"
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 # Crear el ejecutable
 $(EXECUTABLE): $(OBJECTS)
 	@echo "[LINKING] Creando ejecutable..."
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "[SUCCESS] Ejecutable creado en: $@"
-
-# Compilar archivos objeto $(INCLUDE_DIR)/Juego.hpp $(INCLUDE_DIR)/Motor.hpp $(INCLUDE_DIR)/MonitorCamaras.hpp $(INCLUDE_DIR)/Guardia.hpp $(INCLUDE_DIR)/Personaje.hpp
-	@mkdir -p $(OBJ_DIR)
-	@echo "[COMPILE] Main
-	@echo "[COMPILE] Motor.cpp"
-	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Limpiar archivos compilados
 clean:
