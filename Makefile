@@ -2,7 +2,7 @@
 # Compilador y flags
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -I./include
-LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system
+LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system
 
 # Directorios
 SRC_DIR = src

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <optional>
 #include <iostream>
 #include <ctime>      
@@ -8,6 +9,7 @@
 #include <filesystem>
 #include <vector>
 #include <algorithm>
+#include <string>
 #include "Guardia.hpp"
 #include "MonitorCamaras.hpp"
 #include "Personaje.hpp" 
@@ -79,6 +81,11 @@ private:
     float retrasoAtaque;
     std::string atacanteActual;
 
+    std::map<std::string, sf::SoundBuffer> buffersAudio;
+    std::optional<sf::Sound> sonidoAmbiente;
+    std::vector<sf::Sound> sonidosActivos;
+    bool audioDisponible;
+
     bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
         for (const auto& ruta : rutas) {
             if (textura.loadFromFile(ruta)) {
@@ -95,6 +102,69 @@ private:
             }
         }
         return false;
+    }
+
+    bool cargarBufferAudio(const std::string& clave, const std::vector<std::string>& rutas) {
+        sf::SoundBuffer buffer;
+        for (const auto& ruta : rutas) {
+            if (buffer.loadFromFile(ruta)) {
+                buffersAudio.insert({clave, buffer});
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void reproducirSonido(const std::string& clave, float volumen = 75.0f) {
+        auto buffer = buffersAudio.find(clave);
+        if (buffer == buffersAudio.end()) {
+            return;
+        }
+
+        sonidosActivos.erase(
+            std::remove_if(sonidosActivos.begin(), sonidosActivos.end(),
+                           [](const sf::Sound& sonido) {
+                               return sonido.getStatus() == sf::SoundSource::Status::Stopped;
+                           }),
+            sonidosActivos.end());
+
+        sonidosActivos.emplace_back(buffer->second);
+        sonidosActivos.back().setVolume(volumen);
+        sonidosActivos.back().play();
+    }
+
+    void cargarAudio() {
+        const std::string base = "assets/textures/musica/audio_juego/";
+        const std::string baseAlterna = "../assets/textures/musica/audio_juego/";
+
+        audioDisponible = true;
+        if (cargarBufferAudio("ambiente", {base + "ambiente_tenebroso.wav", baseAlterna + "ambiente_tenebroso.wav"})) {
+            sonidoAmbiente.emplace(buffersAudio.at("ambiente"));
+            sonidoAmbiente->setLooping(true);
+            sonidoAmbiente->setVolume(55.0f);
+            sonidoAmbiente->play();
+        } else {
+            audioDisponible = false;
+            std::cerr << "No se encontro musica ambiente" << std::endl;
+        }
+
+        std::vector<std::pair<std::string, std::string>> efectos = {
+            {"puerta", "puerta_metal.wav"},
+            {"monitor", "monitor_static.wav"},
+            {"camara", "cambio_camara.wav"},
+            {"luz", "luz_pasillo.wav"},
+            {"ataque", "alerta_ataque.wav"},
+            {"jumpscare", "jumpscare.wav"},
+            {"gameover", "game_over.wav"},
+            {"victoria", "victoria.wav"}
+        };
+
+        for (const auto& efecto : efectos) {
+            if (!cargarBufferAudio(efecto.first, {base + efecto.second, baseAlterna + efecto.second})) {
+                audioDisponible = false;
+                std::cerr << "No se encontro audio: " << efecto.second << std::endl;
+            }
+        }
     }
 
     bool cargarPrimerPngEnCarpeta(sf::Texture& textura, const std::vector<std::string>& carpetas) {
@@ -154,6 +224,7 @@ private:
         retrasoAtaque = 1.0f + (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * 2.0f;
         estadoJuego = EstadoJuego::AtaquePendiente;
         relojEstado.restart();
+        reproducirSonido("ataque", 62.0f);
         std::cerr << "[ATAQUE] " << atacanteActual << " entro. Jumpscare en "
                   << retrasoAtaque << " segundos." << std::endl;
     }
@@ -163,11 +234,13 @@ private:
         juegoTerminado = true;
         victoria = false;
         relojEstado.restart();
+        reproducirSonido("jumpscare", 78.0f);
     }
 
     void pasarAGameOver() {
         estadoJuego = EstadoJuego::GameOver;
         relojEstado.restart();
+        reproducirSonido("gameover", 62.0f);
     }
 
     void resetearPartida() {
@@ -204,6 +277,10 @@ private:
         relojTerminal.restart();
         relojNoche.restart();
         relojEstado.restart();
+        if (sonidoAmbiente.has_value() &&
+            sonidoAmbiente->getStatus() != sf::SoundSource::Status::Playing) {
+            sonidoAmbiente->play();
+        }
     }
 
     void cargarTexturasPersonajesPuerta() {
@@ -268,29 +345,34 @@ private:
 
                 if (botonPresionado->code == sf::Keyboard::Key::A) {
                     jugador.alternarPuertaIzquierda();
+                    reproducirSonido("puerta", 54.0f);
                 }
                 if (botonPresionado->code == sf::Keyboard::Key::D) {
                     jugador.alternarPuertaDerecha();
+                    reproducirSonido("puerta", 54.0f);
                 }
                 
                 if (botonPresionado->code == sf::Keyboard::Key::Space) {
                     jugador.alternarMonitor();
+                    reproducirSonido("monitor", 44.0f);
                 }
 
                 // Luces de pasillo - Q para izquierda, E para derecha
                 if (botonPresionado->code == sf::Keyboard::Key::Q) {
                     jugador.alternarLuzIzquierda();
+                    reproducirSonido("luz", 38.0f);
                 }
                 if (botonPresionado->code == sf::Keyboard::Key::E) {
                     jugador.alternarLuzDerecha();
+                    reproducirSonido("luz", 38.0f);
                 }
 
                 if (jugador.esMonitorAbierto()) {
-                    if (botonPresionado->code == sf::Keyboard::Key::Num1) monitor.cambiarCamara(TipoCamara::CAM_01_DULCERIA);
-                    if (botonPresionado->code == sf::Keyboard::Key::Num2) monitor.cambiarCamara(TipoCamara::CAM_02_PASILLO_A);
-                    if (botonPresionado->code == sf::Keyboard::Key::Num3) monitor.cambiarCamara(TipoCamara::CAM_03_PASILLO_B); 
-                    if (botonPresionado->code == sf::Keyboard::Key::Num4) monitor.cambiarCamara(TipoCamara::CAM_04_SALAS);
-                    if (botonPresionado->code == sf::Keyboard::Key::Num5) monitor.cambiarCamara(TipoCamara::CAM_05_BANOS);
+                    if (botonPresionado->code == sf::Keyboard::Key::Num1) { monitor.cambiarCamara(TipoCamara::CAM_01_DULCERIA); reproducirSonido("camara", 36.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num2) { monitor.cambiarCamara(TipoCamara::CAM_02_PASILLO_A); reproducirSonido("camara", 36.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num3) { monitor.cambiarCamara(TipoCamara::CAM_03_PASILLO_B); reproducirSonido("camara", 36.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num4) { monitor.cambiarCamara(TipoCamara::CAM_04_SALAS); reproducirSonido("camara", 36.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num5) { monitor.cambiarCamara(TipoCamara::CAM_05_BANOS); reproducirSonido("camara", 36.0f); }
                 }
             }
         }
@@ -343,6 +425,7 @@ private:
                 victoria = true;
                 estadoJuego = EstadoJuego::Victoria;
                 tiempoMuerteAcumulado = 0.0f;
+                reproducirSonido("victoria", 82.0f);
                 return;
             }
         }
@@ -681,6 +764,7 @@ public:
         std::srand(static_cast<unsigned int>(std::time(nullptr))); 
         retrasoAtaque = 0.0f;
         atacanteActual.clear();
+        audioDisponible = false;
         fuenteUICargada = cargarFuenteDesdeRutas(fuenteUI, {
             "assets/fonts/arial.ttf",
             "../assets/fonts/arial.ttf",
@@ -720,6 +804,7 @@ public:
         // Cargar texturas de personajes para las puertas
         cargarTexturasPersonajesPuerta();
         cargarTexturasJumpscare();
+        cargarAudio();
 
         // Configuración visual del medidor de batería
         barraEnergiaFondo.setSize(sf::Vector2f(250.0f, 20.0f));
