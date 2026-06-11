@@ -59,7 +59,7 @@ private:
                extension == ".bmp";
     }
 
-    bool cargarPrimeraImagenEnCarpeta(sf::Texture& textura, const std::vector<std::string>& carpetas) {
+    bool cargarPrimeraImagenEnCarpeta(sf::Texture& textura, const std::vector<std::string>& carpetas) const {
         for (const auto& carpeta : carpetas) {
             std::filesystem::path rutaCarpeta(carpeta);
             if (!std::filesystem::exists(rutaCarpeta) || !std::filesystem::is_directory(rutaCarpeta)) {
@@ -113,21 +113,50 @@ private:
         return nombre;
     }
 
+    std::string getCarpetaPersonaje(const std::string& nombre) const {
+        std::string clave = getClaveTexturaPersonaje(nombre);
+        if (clave == "Gobo") return "gobo";
+        if (clave == "Director") return "director";
+        if (clave == "Popy") return "popy";
+        if (clave == "TheUsher") return "theusher";
+        if (clave == "TicketyStub") return "ticketystub";
+        return "";
+    }
+
     void dibujarMiniaturaPersonaje(sf::RenderWindow& ventana, const std::string& nombre, sf::Vector2f centro) const {
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
-        if (textura == texturasPersonajes.end()) {
+        sf::Texture texturaTemporal;
+        const sf::Texture* texturaParaDibujar = nullptr;
+
+        if (textura != texturasPersonajes.end()) {
+            texturaParaDibujar = &textura->second;
+        } else {
+            std::string carpeta = getCarpetaPersonaje(nombre);
+            if (!carpeta.empty()) {
+                std::vector<std::string> rutas = {
+                    "assets/textures/personajes/" + carpeta,
+                    "../assets/textures/personajes/" + carpeta
+                };
+
+                if (cargarPrimeraImagenEnCarpeta(texturaTemporal, rutas)) {
+                    texturaParaDibujar = &texturaTemporal;
+                }
+            }
+        }
+
+        if (texturaParaDibujar == nullptr) {
             return;
         }
 
-        sf::Sprite sprite(textura->second);
-        const auto tam = textura->second.getSize();
-        float escalaX = 54.f / static_cast<float>(tam.x);
-        float escalaY = 54.f / static_cast<float>(tam.y);
+        sf::Sprite sprite(*texturaParaDibujar);
+        const auto tam = texturaParaDibujar->getSize();
+        float escalaX = 86.f / static_cast<float>(tam.x);
+        float escalaY = 86.f / static_cast<float>(tam.y);
         float escala = std::min(escalaX, escalaY);
 
         sprite.setScale({escala, escala});
         sprite.setOrigin({static_cast<float>(tam.x) / 2.f, static_cast<float>(tam.y) / 2.f});
-        sprite.setPosition(centro + sf::Vector2f(0.f, -24.f));
+        sprite.setPosition(centro + sf::Vector2f(0.f, -32.f));
         ventana.draw(sprite);
     }
 
