@@ -68,6 +68,7 @@ private:
     sf::Clock relojEnergia;
     sf::Clock relojTerminal;
     sf::Clock relojEstado;
+    sf::Clock relojIntroNoche1;
     
     // Control del Tiempo y Victoria
     sf::Clock relojNoche;
@@ -82,6 +83,7 @@ private:
     std::string atacanteActual;
 
     std::map<std::string, sf::SoundBuffer> buffersAudio;
+    std::optional<sf::Sound> sonidoIntroNoche1;
     std::optional<sf::Sound> sonidoAmbiente;
     std::vector<sf::Sound> sonidosActivos;
     bool audioDisponible;
@@ -136,6 +138,18 @@ private:
         sonidosActivos.back().play();
     }
 
+    void iniciarIntroNoche1() {
+        if (!sonidoIntroNoche1.has_value()) {
+            return;
+        }
+
+        sonidoIntroNoche1->setLooping(false);
+        sonidoIntroNoche1->play();
+        introNoche1Reproducido = true;
+        introNoche1Activa = true;
+        relojIntroNoche1.restart();
+    }
+
     void cargarAudio() {
         const std::string base = "assets/textures/musica/audio_juego/";
         const std::string baseAlterna = "../assets/textures/musica/audio_juego/";
@@ -145,7 +159,6 @@ private:
             sonidoAmbiente.emplace(buffersAudio.at("ambiente"));
             sonidoAmbiente->setLooping(true);
             sonidoAmbiente->setVolume(100.0f);
-            sonidoAmbiente->play();
         } else {
             audioDisponible = false;
             std::cerr << "No se encontro musica ambiente" << std::endl;
@@ -168,6 +181,11 @@ private:
                 audioDisponible = false;
                 std::cerr << "No se encontro audio: " << efecto.second << std::endl;
             }
+        }
+
+        if (buffersAudio.count("intro") > 0) {
+            sonidoIntroNoche1.emplace(buffersAudio.at("intro"));
+            sonidoIntroNoche1->setVolume(88.0f);
         }
     }
 
@@ -281,10 +299,21 @@ private:
         relojTerminal.restart();
         relojNoche.restart();
         relojEstado.restart();
-        if (sonidoAmbiente.has_value() &&
-            sonidoAmbiente->getStatus() != sf::SoundSource::Status::Playing) {
-            sonidoAmbiente->play();
+        relojIntroNoche1.restart();
+
+        if (sonidoIntroNoche1.has_value()) {
+            sonidoIntroNoche1->stop();
         }
+        if (sonidoAmbiente.has_value()) {
+            sonidoAmbiente->stop();
+        }
+        for (auto& sonido : sonidosActivos) {
+            sonido.stop();
+        }
+        sonidosActivos.clear();
+
+        introNoche1Reproducido = false;
+        introNoche1Activa = false;
     }
 
     void cargarTexturasPersonajesPuerta() {
@@ -426,14 +455,19 @@ private:
 
         // Lógica del Tiempo de la Noche
         if (!introNoche1Reproducido && horaActual == 12) {
-            reproducirSonido("intro", 88.0f);
-            introNoche1Reproducido = true;
-            introNoche1Activa = true;
-            relojEstado.restart();
+            iniciarIntroNoche1();
         }
 
-        if (introNoche1Activa && relojEstado.getElapsedTime().asSeconds() >= duracionIntroNoche1) {
+        if (introNoche1Activa && relojIntroNoche1.getElapsedTime().asSeconds() >= duracionIntroNoche1) {
             introNoche1Activa = false;
+            if (sonidoIntroNoche1.has_value() &&
+                sonidoIntroNoche1->getStatus() == sf::SoundSource::Status::Playing) {
+                sonidoIntroNoche1->stop();
+            }
+            if (sonidoAmbiente.has_value() &&
+                sonidoAmbiente->getStatus() != sf::SoundSource::Status::Playing) {
+                sonidoAmbiente->play();
+            }
         }
 
         acumuladorHora += dt;
@@ -774,6 +808,7 @@ public:
               relojEnergia(),
               relojTerminal(),
               relojEstado(),
+              relojIntroNoche1(),
               relojNoche(),
               estadoJuego(EstadoJuego::Jugando),
               horaActual(12),
