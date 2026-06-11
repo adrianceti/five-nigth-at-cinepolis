@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <map>
 #include <vector>
+#include <filesystem>
 
 // Enumerado para las distintas zonas de Cinépolis
 enum class TipoCamara {
@@ -31,6 +32,15 @@ private:
     // Registro de personajes en cada cámara (nombre -> presente)
     std::map<std::string, bool> personajesPorCamara;
     std::map<std::string, sf::Sprite> spritesPersonajes;
+
+    bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
+        for (const auto& ruta : rutas) {
+            if (textura.loadFromFile(ruta)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     void generarEstatica() const {
         // Genera estática visual en la terminal (simulación de ruido de cámara)
@@ -59,14 +69,17 @@ private:
         };
         
         for (const auto& camara : camaras) {
-            std::string ruta = "assets/textures/camaras/" + camara.second;
             sf::Texture textura;
+            std::vector<std::string> rutas = {
+                "assets/textures/camaras/" + camara.second,
+                "../assets/textures/camaras/" + camara.second
+            };
             
-            if (textura.loadFromFile(ruta)) {
+            if (cargarTextureDesdeRutas(textura, rutas)) {
                 texturasFondo[camara.first] = textura;
-                std::cerr << "✓ Cargado fondo de cámara desde " << ruta << std::endl;
+                std::cerr << "✓ Cargado fondo de cámara desde " << camara.second << std::endl;
             } else {
-                std::cerr << "⚠ No se encontró " << ruta << " - usando color de fallback" << std::endl;
+                std::cerr << "⚠ No se encontró " << camara.second << " - usando color de fallback" << std::endl;
             }
         }
         
@@ -101,9 +114,13 @@ private:
             };
             
             for (const auto& nombre : nombresPosibles) {
-                if (textura.loadFromFile(rutaBase + nombre)) {
+                std::vector<std::string> rutas = {
+                    rutaBase + nombre,
+                    "../" + rutaBase + nombre
+                };
+                if (cargarTextureDesdeRutas(textura, rutas)) {
                     cargada = true;
-                    std::cerr << "✓ Cargada textura de " << personajes[i] << " desde " << rutaBase + nombre << std::endl;
+                    std::cerr << "✓ Cargada textura de " << personajes[i] << " desde " << nombre << std::endl;
                     break;
                 }
             }
