@@ -162,72 +162,73 @@ private:
 
     void obtenerPlanoPersonaje(const std::string& nombre, sf::Vector2f& posicion, sf::Vector2f& maximo) const {
         std::string clave = getClaveTexturaPersonaje(nombre);
-        posicion = {640.f, 610.f};
-        maximo = {360.f, 520.f};
+        const float suelo = 720.f;
+        posicion = {640.f, suelo};
+        maximo = {330.f, 610.f};
 
         if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
             if (clave == "Gobo") {
-                posicion = {230.f, 620.f};
-                maximo = {230.f, 330.f};
+                posicion = {250.f, suelo};
+                maximo = {280.f, 590.f};
             } else if (clave == "Director") {
-                posicion = {650.f, 640.f};
-                maximo = {410.f, 590.f};
+                posicion = {535.f, suelo};
+                maximo = {330.f, 640.f};
             } else if (clave == "Popy") {
-                posicion = {1040.f, 625.f};
-                maximo = {250.f, 360.f};
+                posicion = {785.f, suelo};
+                maximo = {310.f, 610.f};
             } else if (clave == "TheUsher") {
-                posicion = {1110.f, 300.f};
-                maximo = {210.f, 280.f};
+                posicion = {1015.f, suelo};
+                maximo = {300.f, 600.f};
             } else if (clave == "TicketyStub") {
-                posicion = {90.f, 650.f};
-                maximo = {170.f, 230.f};
+                posicion = {1135.f, suelo};
+                maximo = {260.f, 560.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_02_PASILLO_A) {
             if (clave == "TicketyStub") {
-                posicion = {360.f, 645.f};
-                maximo = {290.f, 420.f};
+                posicion = {410.f, suelo};
+                maximo = {320.f, 610.f};
             } else if (clave == "Director") {
-                posicion = {650.f, 650.f};
-                maximo = {360.f, 520.f};
+                posicion = {665.f, suelo};
+                maximo = {340.f, 640.f};
             } else {
-                posicion = {840.f, 650.f};
-                maximo = {330.f, 480.f};
+                posicion = {900.f, suelo};
+                maximo = {320.f, 610.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_03_PASILLO_B) {
             if (clave == "Popy") {
-                posicion = {900.f, 650.f};
-                maximo = {360.f, 520.f};
+                posicion = {760.f, suelo};
+                maximo = {350.f, 640.f};
             } else {
-                posicion = {520.f, 650.f};
-                maximo = {330.f, 470.f};
+                posicion = {520.f, suelo};
+                maximo = {320.f, 610.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_04_SALAS) {
             if (clave == "Gobo") {
-                posicion = {470.f, 640.f};
-                maximo = {330.f, 470.f};
+                posicion = {500.f, suelo};
+                maximo = {330.f, 620.f};
             } else {
-                posicion = {820.f, 640.f};
-                maximo = {330.f, 470.f};
+                posicion = {775.f, suelo};
+                maximo = {330.f, 620.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_05_BANOS) {
             if (clave == "Popy") {
-                posicion = {820.f, 645.f};
-                maximo = {340.f, 500.f};
+                posicion = {760.f, suelo};
+                maximo = {340.f, 630.f};
             } else {
-                posicion = {520.f, 645.f};
-                maximo = {320.f, 460.f};
+                posicion = {520.f, suelo};
+                maximo = {320.f, 610.f};
             }
         }
     }
