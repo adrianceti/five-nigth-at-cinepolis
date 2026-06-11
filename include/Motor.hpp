@@ -141,7 +141,7 @@ private:
         if (cargarBufferAudio("ambiente", {base + "ambiente_tenebroso.wav", baseAlterna + "ambiente_tenebroso.wav"})) {
             sonidoAmbiente.emplace(buffersAudio.at("ambiente"));
             sonidoAmbiente->setLooping(true);
-            sonidoAmbiente->setVolume(90.0f);
+            sonidoAmbiente->setVolume(100.0f);
             sonidoAmbiente->play();
         } else {
             audioDisponible = false;
