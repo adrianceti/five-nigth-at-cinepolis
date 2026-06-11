@@ -262,6 +262,17 @@ private:
     void pasarAGameOver() {
         estadoJuego = EstadoJuego::GameOver;
         relojEstado.restart();
+        introNoche1Activa = false;
+        if (sonidoIntroNoche1.has_value()) {
+            sonidoIntroNoche1->stop();
+        }
+        if (sonidoAmbiente.has_value()) {
+            sonidoAmbiente->stop();
+        }
+        for (auto& sonido : sonidosActivos) {
+            sonido.stop();
+        }
+        sonidosActivos.clear();
         reproducirSonido("gameover", 46.0f);
     }
 
