@@ -85,6 +85,7 @@ private:
     std::optional<sf::Sound> sonidoAmbiente;
     std::vector<sf::Sound> sonidosActivos;
     bool audioDisponible;
+    bool introNoche1Reproducido;
 
     bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
         for (const auto& ruta : rutas) {
@@ -149,6 +150,7 @@ private:
         }
 
         std::vector<std::pair<std::string, std::string>> efectos = {
+            {"intro", "intro_telefono.wav"},
             {"puerta", "puerta_metal.wav"},
             {"monitor", "monitor_static.wav"},
             {"camara", "cambio_camara.wav"},
@@ -421,6 +423,11 @@ private:
         }
 
         // Lógica del Tiempo de la Noche
+        if (!introNoche1Reproducido && horaActual == 12) {
+            reproducirSonido("intro", 88.0f);
+            introNoche1Reproducido = true;
+        }
+
         acumuladorHora += dt;
         if (acumuladorHora >= tiempoPorHora) {
             acumuladorHora = 0.0f;
@@ -771,6 +778,8 @@ public:
         retrasoAtaque = 0.0f;
         atacanteActual.clear();
         audioDisponible = false;
+        introNoche1Reproducido = false;
+        introNoche1Reproducido = false;
         fuenteUICargada = cargarFuenteDesdeRutas(fuenteUI, {
             "assets/fonts/arial.ttf",
             "../assets/fonts/arial.ttf",
