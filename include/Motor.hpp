@@ -152,7 +152,7 @@ private:
             {"puerta", "puerta_metal.wav"},
             {"monitor", "monitor_static.wav"},
             {"camara", "cambio_camara.wav"},
-            {"luz", "luz_pasillo.wav"},
+            {"luz_roja", "alerta_luz_roja.wav"},
             {"ataque", "alerta_ataque.wav"},
             {"jumpscare", "jumpscare.wav"},
             {"gameover", "game_over.wav"},
@@ -359,12 +359,18 @@ private:
 
                 // Luces de pasillo - Q para izquierda, E para derecha
                 if (botonPresionado->code == sf::Keyboard::Key::Q) {
+                    bool estabaApagada = !jugador.esLuzIzquierdaEncendida();
                     jugador.alternarLuzIzquierda();
-                    reproducirSonido("luz", 24.0f);
+                    if (estabaApagada && jugador.esLuzIzquierdaEncendida()) {
+                        reproducirSonido("luz_roja", 40.0f);
+                    }
                 }
                 if (botonPresionado->code == sf::Keyboard::Key::E) {
+                    bool estabaApagada = !jugador.esLuzDerechaEncendida();
                     jugador.alternarLuzDerecha();
-                    reproducirSonido("luz", 24.0f);
+                    if (estabaApagada && jugador.esLuzDerechaEncendida()) {
+                        reproducirSonido("luz_roja", 40.0f);
+                    }
                 }
 
                 if (jugador.esMonitorAbierto()) {
