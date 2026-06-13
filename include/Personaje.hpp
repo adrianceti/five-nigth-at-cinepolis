@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <cstdlib>
+#include <algorithm>
 #include "MonitorCamaras.hpp"
 
 // Clase base para todos los personajes
@@ -23,7 +24,8 @@ public:
 
     virtual ~Personaje() = default;
 
-    virtual void actualizarIA(float dt, bool puertaCerrada, bool puedeMoverse = true) {
+    virtual void actualizarIA(float dt, bool puertaCerrada, bool puedeMoverse = true,
+                              float intervaloIntentos = 9.0f, int bonoDificultad = 0) {
         if (estaAdentro) return;
 
         if (!puedeMoverse) {
@@ -44,10 +46,11 @@ public:
         }
 
         tiempoAcumuladoIA += dt;
-        if (tiempoAcumuladoIA >= 9.0f) {
+        if (tiempoAcumuladoIA >= intervaloIntentos) {
             tiempoAcumuladoIA = 0.0f;
             int intento = (std::rand() % 20) + 1;
-            if (intento <= dificultad) {
+            int dificultadEfectiva = std::clamp(dificultad + bonoDificultad, 1, 20);
+            if (intento <= dificultadEfectiva) {
                 avanzarEnRuta();
             }
         }

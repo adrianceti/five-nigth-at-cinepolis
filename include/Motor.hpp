@@ -205,6 +205,23 @@ private:
         }
     }
 
+    struct CurvaDificultadHoraria {
+        float intervaloIntentos;
+        int bonoDado;
+    };
+
+    CurvaDificultadHoraria obtenerCurvaDificultadHoraria() const {
+        switch (horaActual) {
+            case 12: return {9.0f, 0};
+            case 1:  return {7.8f, 1};
+            case 2:  return {6.6f, 2};
+            case 3:  return {5.0f, 3};
+            case 4:  return {3.8f, 5};
+            case 5:  return {2.4f, 7};
+            default: return {9.0f, 0};
+        }
+    }
+
     bool cargarPrimerPngEnCarpeta(sf::Texture& textura, const std::vector<std::string>& carpetas) {
         for (const auto& carpeta : carpetas) {
             std::filesystem::path rutaCarpeta(carpeta);
@@ -571,11 +588,12 @@ private:
 
         // Actualizar a todos los personajes
         bool puedeMoverIA = !introNoche1Activa;
-        gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA);
-        director.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA);
-        popy.actualizarIA(dt, jugador.esPuertaDerechaCerrada(), puedeMoverIA);
-        usher.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA);
-        stub.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA);
+        CurvaDificultadHoraria curvaIA = obtenerCurvaDificultadHoraria();
+        gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        director.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        popy.actualizarIA(dt, jugador.esPuertaDerechaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        usher.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        stub.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
 
         // Verificar si algún personaje logró entrar
         if (gobo.esEstaAdentro()) {
