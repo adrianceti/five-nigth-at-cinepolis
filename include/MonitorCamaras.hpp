@@ -80,6 +80,31 @@ private:
         return false;
     }
 
+    // Devuelve el bounding box (rectángulo) de los pixeles no transparentes en la textura
+    sf::IntRect obtenerBoundingBoxAlpha(const sf::Texture& textura) const {
+        sf::Image img = textura.copyToImage();
+        unsigned int w = img.getSize().x;
+        unsigned int h = img.getSize().y;
+        int minX = static_cast<int>(w), minY = static_cast<int>(h), maxX = -1, maxY = -1;
+
+        for (unsigned int y = 0; y < h; ++y) {
+            for (unsigned int x = 0; x < w; ++x) {
+                if (img.getPixel(sf::Vector2u(x, y)).a > 8) {
+                    if (static_cast<int>(x) < minX) minX = x;
+                    if (static_cast<int>(y) < minY) minY = y;
+                    if (static_cast<int>(x) > maxX) maxX = x;
+                    if (static_cast<int>(y) > maxY) maxY = y;
+                }
+            }
+        }
+
+        if (maxX < 0 || maxY < 0) {
+            return sf::IntRect(sf::Vector2i(0, 0), sf::Vector2i(static_cast<int>(w), static_cast<int>(h)));
+        }
+
+        return sf::IntRect(sf::Vector2i(minX, minY), sf::Vector2i(maxX - minX + 1, maxY - minY + 1));
+    }
+
     sf::Vector2f tamanoPantalla() const {
         return sf::Vector2f(1280.f, 720.f);
     }
@@ -149,13 +174,14 @@ private:
         }
 
         sf::Sprite sprite(*texturaParaDibujar);
-        const auto tam = texturaParaDibujar->getSize();
-        float escalaX = 86.f / static_cast<float>(tam.x);
-        float escalaY = 86.f / static_cast<float>(tam.y);
+        // Usar bounding box para ignorar márgenes transparentes al calcular la escala y el origen
+        sf::IntRect bbox = obtenerBoundingBoxAlpha(*texturaParaDibujar);
+        float escalaX = 86.f / static_cast<float>(bbox.size.x);
+        float escalaY = 86.f / static_cast<float>(bbox.size.y);
         float escala = std::min(escalaX, escalaY);
 
         sprite.setScale({escala, escala});
-        sprite.setOrigin({static_cast<float>(tam.x) / 2.f, static_cast<float>(tam.y) / 2.f});
+        sprite.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.f, static_cast<float>(bbox.position.y + bbox.size.y) / 2.f});
         sprite.setPosition(centro + sf::Vector2f(0.f, -32.f));
         ventana.draw(sprite);
     }
@@ -426,7 +452,7 @@ private:
         return sf::Color(20, 40, 20);
     }
 
-    void dibujarPersonajesEnMonitor(sf::RenderWindow& ventana) {
+    void dibujarPersonajesEnMonitor() {
         // Este método será llamado desde Motor pasando los personajes activos
         // Por ahora solo dibuja si hay personajes detectados en la cámara
     }
@@ -456,17 +482,16 @@ public:
 
         if (texturaParaDibujar != nullptr) {
             sf::Sprite sprite(*texturaParaDibujar);
-            const auto tam = texturaParaDibujar->getSize();
+            sf::IntRect bbox = obtenerBoundingBoxAlpha(*texturaParaDibujar);
             sf::Vector2f posicion;
             sf::Vector2f maximo;
             obtenerPlanoPersonaje(nombre, posicion, maximo);
-
-            float escalaX = maximo.x / static_cast<float>(tam.x);
-            float escalaY = maximo.y / static_cast<float>(tam.y);
+            float escalaX = maximo.x / static_cast<float>(bbox.size.x);
+            float escalaY = maximo.y / static_cast<float>(bbox.size.y);
             float escala = std::min(escalaX, escalaY);
 
             sprite.setScale({escala, escala});
-            sprite.setOrigin({static_cast<float>(tam.x) / 2.f, static_cast<float>(tam.y)});
+            sprite.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.f, static_cast<float>(bbox.position.y + bbox.size.y)});
             sprite.setPosition(posicion);
             ventana.draw(sprite);
         }
@@ -522,10 +547,6 @@ public:
             textoNodo.setFillColor(estaAqui ? sf::Color::Black : sf::Color(220, 255, 220));
             textoNodo.setPosition({x + 8.f, rutaY + 5.f});
             ventana.draw(textoNodo);
-
-            if (estaAqui) {
-                dibujarMiniaturaPersonaje(ventana, nombre, {x + nodoAncho / 2.f, rutaY});
-            }
 
             if (i + 1 < ruta.size()) {
                 sf::RectangleShape conector({espacio, 2.f});

@@ -210,6 +210,31 @@ private:
         return false;
     }
 
+    // Devuelve el bounding box (rectángulo) de los pixeles no transparentes en la textura
+    sf::IntRect obtenerBoundingBoxAlpha(const sf::Texture& textura) {
+        sf::Image img = textura.copyToImage();
+        unsigned int w = img.getSize().x;
+        unsigned int h = img.getSize().y;
+        int minX = static_cast<int>(w), minY = static_cast<int>(h), maxX = -1, maxY = -1;
+
+        for (unsigned int y = 0; y < h; ++y) {
+            for (unsigned int x = 0; x < w; ++x) {
+                if (img.getPixel(sf::Vector2u(x, y)).a > 8) { // consider alpha > ~3% as opaque
+                    if (static_cast<int>(x) < minX) minX = x;
+                    if (static_cast<int>(y) < minY) minY = y;
+                    if (static_cast<int>(x) > maxX) maxX = x;
+                    if (static_cast<int>(y) > maxY) maxY = y;
+                }
+            }
+        }
+
+        if (maxX < 0 || maxY < 0) {
+            return sf::IntRect(sf::Vector2i(0, 0), sf::Vector2i(static_cast<int>(w), static_cast<int>(h)));
+        }
+
+        return sf::IntRect(sf::Vector2i(minX, minY), sf::Vector2i(maxX - minX + 1, maxY - minY + 1));
+    }
+
     void cargarTexturasJumpscare() {
         std::vector<std::pair<std::string, std::string>> personajes = {
             {"Gobo", "gobo"},
@@ -361,7 +386,14 @@ private:
             if (cargada) {
                 texturasPersonajesPuerta.insert({personajes[i], textura});
                 sf::Sprite sprite(textura);
-                sprite.setScale({0.5f, 0.5f}); // Escalar a tamaño visible en puerta
+                // Normalizar escala basándonos en el bounding box real (sin transparencias)
+                sf::IntRect bbox = obtenerBoundingBoxAlpha(textura);
+                const float alturaObjetivoPuerta = 300.0f; // píxeles de altura objetivo en pantalla
+                float escala = 1.0f;
+                if (bbox.size.y > 0) escala = alturaObjetivoPuerta / static_cast<float>(bbox.size.y);
+                sprite.setScale({escala, escala});
+                // Origen en la base del bounding box para posicionarlo sobre el "suelo" de la escena
+                sprite.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.0f, static_cast<float>(bbox.position.y + bbox.size.y)});
                 spritesPersonajesPuerta.insert({personajes[i], sprite});
             } else {
                 std::cerr << "⚠ No se encontró textura de puerta para " << personajes[i] << std::endl;
@@ -857,6 +889,10 @@ public:
         vistaInterfaz.setCenter({640.0f, 360.0f});
 
         if (!cargarTextureDesdeRutas(texturaOficina, {
+            "assets/textures/oficina/oficina2.png",
+            "../assets/textures/oficina/oficina2.png",
+            "assets/textures/oficina/oficina.png",
+            "../assets/textures/oficina/oficina.png",
             "assets/textures/oficina.png",
             "../assets/textures/oficina.png"
         })) {

@@ -1,8 +1,8 @@
 # Makefile para Five Nights at Cinepolis
 # Compilador y flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -I./include
-LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system
+CXXFLAGS = -std=c++17 -Wall -Wextra -I./include -I/opt/homebrew/include
+LDFLAGS = -L/opt/homebrew/lib -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system
 
 # Directorios
 SRC_DIR = src
