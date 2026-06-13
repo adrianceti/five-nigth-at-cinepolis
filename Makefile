@@ -11,7 +11,7 @@ BIN_DIR = bin
 OBJ_DIR = obj
 
 # Archivos fuente y objetos
-# Nota: Juego.cpp y Motor.cpp tienen implementaciones inline en headers
+# Nota: Juego y Motor viven inline en headers; src/ solo contiene Main.cpp
 SOURCES = $(SRC_DIR)/Main.cpp
 OBJECTS = $(OBJ_DIR)/Main.o
 
