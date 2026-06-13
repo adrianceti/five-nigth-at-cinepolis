@@ -159,6 +159,15 @@ private:
     }
 
     void generarTexturaInterferenciaMonitor() {
+        if (cargarTextureDesdeRutas(texturaInterferenciaMonitor, {
+                "assets/textures/monitor/estatica.png",
+                "../assets/textures/monitor/estatica.png"
+            })) {
+            texturaInterferenciaMonitor.setRepeated(true);
+            texturaInterferenciaMonitor.setSmooth(false);
+            return;
+        }
+
         sf::Image ruido(sf::Vector2u(128, 128), sf::Color::Black);
 
         for (unsigned int y = 0; y < 128; ++y) {
@@ -201,8 +210,11 @@ private:
             relojParpadeoInterferencia.restart();
         }
 
-        int offsetX = (std::rand() + fotogramaInterferenciaMonitor * 17) % 128;
-        int offsetY = (std::rand() + fotogramaInterferenciaMonitor * 31) % 128;
+        sf::Vector2u tamRuido = texturaInterferenciaMonitor.getSize();
+        int anchoRuido = std::max(1, static_cast<int>(tamRuido.x));
+        int altoRuido = std::max(1, static_cast<int>(tamRuido.y));
+        int offsetX = (std::rand() + fotogramaInterferenciaMonitor * 17) % anchoRuido;
+        int offsetY = (std::rand() + fotogramaInterferenciaMonitor * 31) % altoRuido;
         bool voltearX = fotogramaInterferenciaMonitor % 2 == 0;
         bool voltearY = (fotogramaInterferenciaMonitor / 2) % 2 == 0;
 
@@ -588,11 +600,11 @@ private:
                 }
 
                 if (jugador.esMonitorAbierto()) {
-                    if (botonPresionado->code == sf::Keyboard::Key::Num1) { monitor.cambiarCamara(TipoCamara::CAM_01_DULCERIA); reproducirSonido("camara", 24.0f); }
-                    if (botonPresionado->code == sf::Keyboard::Key::Num2) { monitor.cambiarCamara(TipoCamara::CAM_02_PASILLO_A); reproducirSonido("camara", 24.0f); }
-                    if (botonPresionado->code == sf::Keyboard::Key::Num3) { monitor.cambiarCamara(TipoCamara::CAM_03_PASILLO_B); reproducirSonido("camara", 24.0f); }
-                    if (botonPresionado->code == sf::Keyboard::Key::Num4) { monitor.cambiarCamara(TipoCamara::CAM_04_SALAS); reproducirSonido("camara", 24.0f); }
-                    if (botonPresionado->code == sf::Keyboard::Key::Num5) { monitor.cambiarCamara(TipoCamara::CAM_05_BANOS); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num1) { monitor.cambiarCamara(TipoCamara::CAM_01_DULCERIA); activarInterferenciaMonitor(); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num2) { monitor.cambiarCamara(TipoCamara::CAM_02_PASILLO_A); activarInterferenciaMonitor(); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num3) { monitor.cambiarCamara(TipoCamara::CAM_03_PASILLO_B); activarInterferenciaMonitor(); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num4) { monitor.cambiarCamara(TipoCamara::CAM_04_SALAS); activarInterferenciaMonitor(); reproducirSonido("camara", 24.0f); }
+                    if (botonPresionado->code == sf::Keyboard::Key::Num5) { monitor.cambiarCamara(TipoCamara::CAM_05_BANOS); activarInterferenciaMonitor(); reproducirSonido("camara", 24.0f); }
                 }
             }
         }
