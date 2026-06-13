@@ -10,6 +10,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <cstdint>
 #include "Guardia.hpp"
 #include "MonitorCamaras.hpp"
 #include "Personaje.hpp" 
@@ -70,6 +71,7 @@ private:
     sf::Clock relojTerminal;
     sf::Clock relojEstado;
     sf::Clock relojIntroNoche1;
+    sf::Clock relojVictoria;
     
     // Control del Tiempo y Victoria
     sf::Clock relojNoche;
@@ -91,6 +93,7 @@ private:
     bool introNoche1Reproducido;
     bool introNoche1Activa;
     float duracionIntroNoche1;
+    float duracionVictoria;
 
     bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
         for (const auto& ruta : rutas) {
@@ -272,6 +275,26 @@ private:
         reproducirSonido("jumpscare", 86.0f);
     }
 
+    void iniciarVictoria() {
+        estadoJuego = EstadoJuego::Victoria;
+        juegoTerminado = true;
+        victoria = true;
+        introNoche1Activa = false;
+        relojVictoria.restart();
+
+        if (sonidoIntroNoche1.has_value()) {
+            sonidoIntroNoche1->stop();
+        }
+        if (sonidoAmbiente.has_value()) {
+            sonidoAmbiente->stop();
+        }
+        for (auto& sonido : sonidosActivos) {
+            sonido.stop();
+        }
+        sonidosActivos.clear();
+        reproducirSonido("victoria", 78.0f);
+    }
+
     void pasarAGameOver() {
         estadoJuego = EstadoJuego::GameOver;
         relojEstado.restart();
@@ -305,6 +328,7 @@ private:
         retrasoAtaque = 0.0f;
         atacanteActual.clear();
         estadoJuego = EstadoJuego::Jugando;
+        relojVictoria.restart();
 
         posicionCamaraX = anchoVirtualOficina / 2.0f;
         vistaOficina.setCenter({posicionCamaraX, 360.0f});
@@ -321,6 +345,7 @@ private:
         relojNoche.restart();
         relojEstado.restart();
         relojIntroNoche1.restart();
+        relojVictoria.restart();
 
         if (sonidoIntroNoche1.has_value()) {
             sonidoIntroNoche1->stop();
@@ -448,7 +473,14 @@ private:
             return;
         }
 
-        if (estadoJuego == EstadoJuego::GameOver || estadoJuego == EstadoJuego::Victoria) {
+        if (estadoJuego == EstadoJuego::Victoria) {
+            if (relojVictoria.getElapsedTime().asSeconds() >= duracionVictoria) {
+                ventana.close();
+            }
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::GameOver) {
             return;
         }
 
@@ -498,10 +530,7 @@ private:
             else horaActual++;
 
             if (horaActual == 6) {
-                victoria = true;
-                estadoJuego = EstadoJuego::Victoria;
-                tiempoMuerteAcumulado = 0.0f;
-                reproducirSonido("victoria", 78.0f);
+                iniciarVictoria();
                 return;
             }
         }
@@ -683,10 +712,87 @@ private:
         ventana.display();
     }
 
+    void renderizarVictoria() {
+        float tiempo = relojVictoria.getElapsedTime().asSeconds();
+        ventana.clear(sf::Color(8, 10, 12));
+        ventana.setView(vistaInterfaz);
+
+        for (int y = 0; y < 720; y += 10) {
+            sf::RectangleShape linea(sf::Vector2f(1280.0f, 2.0f));
+            linea.setPosition({0.0f, static_cast<float>(y)});
+            int brillo = 18 + ((y / 10) % 2) * 10;
+            linea.setFillColor(sf::Color(brillo, brillo, brillo + 6, 120));
+            ventana.draw(linea);
+        }
+
+        sf::RectangleShape resplandor(sf::Vector2f(1280.0f, 720.0f));
+        std::uint8_t alpha = tiempo < 2.0f ? static_cast<std::uint8_t>(80.0f * (tiempo / 2.0f)) : 80;
+        resplandor.setFillColor(sf::Color(240, 225, 170, alpha));
+        ventana.draw(resplandor);
+
+        sf::RectangleShape panelReloj(sf::Vector2f(520.0f, 210.0f));
+        panelReloj.setPosition({380.0f, 160.0f});
+        panelReloj.setFillColor(sf::Color(4, 6, 8, 235));
+        panelReloj.setOutlineColor(tiempo < 1.8f ? sf::Color(210, 210, 210) : sf::Color(255, 215, 90));
+        panelReloj.setOutlineThickness(5.0f);
+        ventana.draw(panelReloj);
+
+        std::string horaVictoria = tiempo < 1.6f ? "5 AM" : "6 AM";
+        if (tiempo >= 1.45f && tiempo < 1.8f && static_cast<int>(tiempo * 18.0f) % 2 == 0) {
+            horaVictoria = "";
+        }
+
+        if (fuenteUICargada) {
+            sf::Text reloj(fuenteUI, horaVictoria, 96);
+            reloj.setFillColor(tiempo < 1.8f ? sf::Color(240, 240, 240) : sf::Color(255, 230, 120));
+            reloj.setOutlineColor(sf::Color::Black);
+            reloj.setOutlineThickness(4.0f);
+            reloj.setStyle(sf::Text::Bold);
+            sf::FloatRect limitesReloj = reloj.getLocalBounds();
+            reloj.setOrigin({limitesReloj.position.x + limitesReloj.size.x / 2.0f, limitesReloj.position.y + limitesReloj.size.y / 2.0f});
+            reloj.setPosition({640.0f, 260.0f});
+            ventana.draw(reloj);
+
+            if (tiempo >= 2.2f) {
+                sf::Text turno(fuenteUI, "TURNO SUPERADO", 54);
+                turno.setFillColor(sf::Color(255, 245, 210));
+                turno.setOutlineColor(sf::Color(80, 55, 0));
+                turno.setOutlineThickness(3.0f);
+                turno.setStyle(sf::Text::Bold);
+                sf::FloatRect limitesTurno = turno.getLocalBounds();
+                turno.setOrigin({limitesTurno.position.x + limitesTurno.size.x / 2.0f, limitesTurno.position.y + limitesTurno.size.y / 2.0f});
+                turno.setPosition({640.0f, 455.0f});
+                ventana.draw(turno);
+            }
+
+            if (tiempo >= 3.1f) {
+                sf::Text detalle(fuenteUI, "6:00 AM", 30);
+                detalle.setFillColor(sf::Color(210, 230, 220));
+                sf::FloatRect limitesDetalle = detalle.getLocalBounds();
+                detalle.setOrigin({limitesDetalle.position.x + limitesDetalle.size.x / 2.0f, limitesDetalle.position.y + limitesDetalle.size.y / 2.0f});
+                detalle.setPosition({640.0f, 520.0f});
+                ventana.draw(detalle);
+            }
+        } else {
+            sf::RectangleShape bloqueHora(sf::Vector2f(tiempo < 1.6f ? 220.0f : 300.0f, 44.0f));
+            bloqueHora.setFillColor(tiempo < 1.8f ? sf::Color::White : sf::Color(255, 220, 90));
+            bloqueHora.setPosition({tiempo < 1.6f ? 530.0f : 490.0f, 238.0f});
+            ventana.draw(bloqueHora);
+
+            if (tiempo >= 2.2f) {
+                sf::RectangleShape bloqueTurno(sf::Vector2f(520.0f, 32.0f));
+                bloqueTurno.setFillColor(sf::Color(255, 245, 210));
+                bloqueTurno.setPosition({380.0f, 445.0f});
+                ventana.draw(bloqueTurno);
+            }
+        }
+
+        ventana.display();
+    }
+
     void renderizar() {
         if (estadoJuego == EstadoJuego::Victoria) {
-            ventana.clear(sf::Color(20, 80, 20)); 
-            ventana.display();
+            renderizarVictoria();
             return;
         }
 
@@ -822,6 +928,7 @@ public:
               relojTerminal(),
               relojEstado(),
               relojIntroNoche1(),
+              relojVictoria(),
               relojNoche(),
               estadoJuego(EstadoJuego::Jugando),
               horaActual(12),
@@ -838,6 +945,7 @@ public:
         introNoche1Reproducido = false;
         introNoche1Activa = false;
         duracionIntroNoche1 = 20.0f;
+        duracionVictoria = 6.5f;
         fuenteUICargada = cargarFuenteDesdeRutas(fuenteUI, {
             "assets/fonts/arial.ttf",
             "../assets/fonts/arial.ttf",
@@ -943,6 +1051,7 @@ public:
         relojTerminal.restart();
         relojNoche.restart();
         relojEstado.restart();
+        relojVictoria.restart();
     }
 
     ~Motor() {}
