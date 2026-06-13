@@ -24,25 +24,25 @@ public:
 
     virtual ~Personaje() = default;
 
-    virtual void actualizarIA(float dt, bool puertaCerrada, bool puedeMoverse = true,
+    virtual bool actualizarIA(float dt, bool puertaCerrada, bool puedeMoverse = true,
                               float intervaloIntentos = 9.0f, int bonoDificultad = 0) {
-        if (estaAdentro) return;
+        if (estaAdentro) return false;
 
         if (!puedeMoverse) {
-            return;
+            return false;
         }
 
         if (estaEnLaPuerta) {
             if (puertaCerrada) {
                 resetear();
-                return;
+                return false;
             }
             tiempoEnPuerta += dt;
             if (tiempoEnPuerta >= 3.5f) {
                 estaAdentro = true;
                 estaEnLaPuerta = false;
             }
-            return;
+            return false;
         }
 
         tiempoAcumuladoIA += dt;
@@ -52,8 +52,11 @@ public:
             int dificultadEfectiva = std::clamp(dificultad + bonoDificultad, 1, 20);
             if (intento <= dificultadEfectiva) {
                 avanzarEnRuta();
+                return true;
             }
         }
+
+        return false;
     }
 
     virtual void avanzarEnRuta() = 0; // Cada personaje tiene su propia ruta

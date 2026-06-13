@@ -56,6 +56,7 @@ private:
     std::optional<sf::Text> textoEnergiaHUD;
     std::optional<sf::Text> textoRelojHUD;
     sf::RectangleShape bloquesConsumo[4]; 
+    sf::Texture texturaInterferenciaMonitor;
 
     // Entidades del juego
     Guardia jugador;
@@ -72,6 +73,8 @@ private:
     sf::Clock relojEstado;
     sf::Clock relojIntroNoche1;
     sf::Clock relojVictoria;
+    sf::Clock relojInterferenciaMonitor;
+    sf::Clock relojParpadeoInterferencia;
     
     // Control del Tiempo y Victoria
     sf::Clock relojNoche;
@@ -84,6 +87,9 @@ private:
     float tiempoMuerteAcumulado;
     float retrasoAtaque;
     std::string atacanteActual;
+    bool interferenciaMonitorActiva;
+    float duracionInterferenciaMonitor;
+    int fotogramaInterferenciaMonitor;
 
     std::map<std::string, sf::SoundBuffer> buffersAudio;
     std::optional<sf::Sound> sonidoIntroNoche1;
@@ -150,6 +156,66 @@ private:
                 bloquesConsumo[i].setFillColor(colorInactivo);
             }
         }
+    }
+
+    void generarTexturaInterferenciaMonitor() {
+        sf::Image ruido(sf::Vector2u(128, 128), sf::Color::Black);
+
+        for (unsigned int y = 0; y < 128; ++y) {
+            for (unsigned int x = 0; x < 128; ++x) {
+                int brillo = std::rand() % 256;
+                int alpha = 135 + (std::rand() % 100);
+                ruido.setPixel(sf::Vector2u(x, y), sf::Color(brillo, brillo, brillo, alpha));
+            }
+        }
+
+        if (!texturaInterferenciaMonitor.loadFromImage(ruido)) {
+            std::cerr << "No se pudo generar la textura de interferencia del monitor" << std::endl;
+            return;
+        }
+        texturaInterferenciaMonitor.setRepeated(true);
+        texturaInterferenciaMonitor.setSmooth(false);
+    }
+
+    void activarInterferenciaMonitor() {
+        interferenciaMonitorActiva = true;
+        relojInterferenciaMonitor.restart();
+        relojParpadeoInterferencia.restart();
+        fotogramaInterferenciaMonitor = std::rand();
+    }
+
+    void actualizarInterferenciaMonitor() {
+        if (interferenciaMonitorActiva &&
+            relojInterferenciaMonitor.getElapsedTime().asSeconds() >= duracionInterferenciaMonitor) {
+            interferenciaMonitorActiva = false;
+        }
+    }
+
+    void dibujarInterferenciaMonitor() {
+        if (!interferenciaMonitorActiva) {
+            return;
+        }
+
+        if (relojParpadeoInterferencia.getElapsedTime().asSeconds() >= 0.035f) {
+            fotogramaInterferenciaMonitor++;
+            relojParpadeoInterferencia.restart();
+        }
+
+        int offsetX = (std::rand() + fotogramaInterferenciaMonitor * 17) % 128;
+        int offsetY = (std::rand() + fotogramaInterferenciaMonitor * 31) % 128;
+        bool voltearX = fotogramaInterferenciaMonitor % 2 == 0;
+        bool voltearY = (fotogramaInterferenciaMonitor / 2) % 2 == 0;
+
+        sf::Sprite ruido(texturaInterferenciaMonitor);
+        ruido.setTextureRect(sf::IntRect(sf::Vector2i(offsetX, offsetY), sf::Vector2i(1280, 720)));
+        ruido.setScale({voltearX ? -1.0f : 1.0f, voltearY ? -1.0f : 1.0f});
+        ruido.setPosition({voltearX ? 1280.0f : 0.0f, voltearY ? 720.0f : 0.0f});
+        ruido.setColor(sf::Color(255, 255, 255, 215));
+        ventana.draw(ruido);
+
+        sf::RectangleShape flash(sf::Vector2f(1280.0f, 720.0f));
+        flash.setFillColor(sf::Color(20, 255, 120, 35 + (std::rand() % 55)));
+        ventana.draw(flash);
     }
 
     void reproducirSonido(const std::string& clave, float volumen = 75.0f) {
@@ -385,6 +451,8 @@ private:
         tiempoMuerteAcumulado = 0.0f;
         retrasoAtaque = 0.0f;
         atacanteActual.clear();
+        interferenciaMonitorActiva = false;
+        fotogramaInterferenciaMonitor = 0;
         estadoJuego = EstadoJuego::Jugando;
         relojVictoria.restart();
 
@@ -404,6 +472,8 @@ private:
         relojEstado.restart();
         relojIntroNoche1.restart();
         relojVictoria.restart();
+        relojInterferenciaMonitor.restart();
+        relojParpadeoInterferencia.restart();
 
         if (sonidoIntroNoche1.has_value()) {
             sonidoIntroNoche1->stop();
@@ -601,15 +671,21 @@ private:
         }
 
         jugador.bajarEnergia(dt);
+        actualizarInterferenciaMonitor();
 
         // Actualizar a todos los personajes
         bool puedeMoverIA = !introNoche1Activa;
         CurvaDificultadHoraria curvaIA = obtenerCurvaDificultadHoraria();
-        gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
-        director.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
-        popy.actualizarIA(dt, jugador.esPuertaDerechaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
-        usher.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
-        stub.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        bool huboMovimientoIA = false;
+        huboMovimientoIA |= gobo.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        huboMovimientoIA |= director.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        huboMovimientoIA |= popy.actualizarIA(dt, jugador.esPuertaDerechaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        huboMovimientoIA |= usher.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+        huboMovimientoIA |= stub.actualizarIA(dt, jugador.esPuertaIzquierdaCerrada(), puedeMoverIA, curvaIA.intervaloIntentos, curvaIA.bonoDado);
+
+        if (huboMovimientoIA) {
+            activarInterferenciaMonitor();
+        }
 
         // Verificar si algún personaje logró entrar
         if (gobo.esEstaAdentro()) {
@@ -913,6 +989,9 @@ private:
         ventana.setView(vistaInterfaz); 
         if (jugador.esMonitorAbierto()) {
             monitor.renderizar(ventana);
+            if (interferenciaMonitorActiva) {
+                dibujarInterferenciaMonitor();
+            } else {
             
             // Mostrar personajes en la cámara actual del monitor
             if (gobo.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Gobo");
@@ -942,6 +1021,7 @@ private:
                     ventana, fuenteUI, "Tickety Stub",
                     {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_02_PASILLO_A},
                     stub.getPosicionActual(), stub.esEnLaPuerta(), 4);
+            }
             }
         } else {
             ventana.draw(barraEnergiaFondo);
@@ -996,6 +1076,8 @@ public:
               relojEstado(),
               relojIntroNoche1(),
               relojVictoria(),
+              relojInterferenciaMonitor(),
+              relojParpadeoInterferencia(),
               relojNoche(),
               estadoJuego(EstadoJuego::Jugando),
               horaActual(12),
@@ -1003,9 +1085,13 @@ public:
               acumuladorHora(0.0f),
               juegoTerminado(false),
               victoria(false),
-              tiempoMuerteAcumulado(0.0f) { // Espacio panorámico ideal para que funcione el paneo
+              tiempoMuerteAcumulado(0.0f),
+              interferenciaMonitorActiva(false),
+              duracionInterferenciaMonitor(0.4f),
+              fotogramaInterferenciaMonitor(0) { // Espacio panorámico ideal para que funcione el paneo
                   
         std::srand(static_cast<unsigned int>(std::time(nullptr))); 
+        generarTexturaInterferenciaMonitor();
         retrasoAtaque = 0.0f;
         atacanteActual.clear();
         audioDisponible = false;
