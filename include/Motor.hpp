@@ -136,6 +136,22 @@ private:
         textoRelojHUD->setPosition({1240.0f, 28.0f});
     }
 
+    void actualizarBloquesConsumoHUD() {
+        int dispositivosActivos = std::clamp(jugador.getDispositivosActivos(), 0, 4);
+        sf::Color colorActivo = dispositivosActivos >= 3
+            ? sf::Color(220, 70, 70)
+            : sf::Color(90, 210, 120);
+        sf::Color colorInactivo(35, 35, 35);
+
+        for (int i = 0; i < 4; ++i) {
+            if (i < dispositivosActivos) {
+                bloquesConsumo[i].setFillColor(colorActivo);
+            } else {
+                bloquesConsumo[i].setFillColor(colorInactivo);
+            }
+        }
+    }
+
     void reproducirSonido(const std::string& clave, float volumen = 75.0f) {
         auto buffer = buffersAudio.find(clave);
         if (buffer == buffersAudio.end()) {
@@ -931,7 +947,8 @@ private:
             ventana.draw(barraEnergiaFondo);
             ventana.draw(barraEnergiaFrente);
 
-            for (int i = 0; i < jugador.getNivelConsumo() && i < 4; i++) {
+            actualizarBloquesConsumoHUD();
+            for (int i = 0; i < 4; i++) {
                 ventana.draw(bloquesConsumo[i]);
             }
 

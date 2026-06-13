@@ -1,35 +1,36 @@
 #pragma once
 
+#include <algorithm>
+
 class Guardia {
 private:
-    float energia;        
-    int nivelConsumo;       
-    
-    bool puertaIzquierda;   
-    bool puertaDerecha;     
-    bool monitorAbierto;    
-    bool luzIzquierda;      
-    bool luzDerecha;        
+    float energia;
+    int nivelConsumo;
+
+    bool puertaIzquierda;
+    bool puertaDerecha;
+    bool monitorAbierto;
+    bool luzIzquierda;
+    bool luzDerecha;
 
 public:
-    Guardia() 
-        : energia(100.0f), nivelConsumo(1), 
+    Guardia()
+        : energia(100.0f), nivelConsumo(1),
           puertaIzquierda(false), puertaDerecha(false), monitorAbierto(false),
           luzIzquierda(false), luzDerecha(false) {}
 
-    
-    void alternarPuertaIzquierda() { 
-        puertaIzquierda = !puertaIzquierda; 
+    void alternarPuertaIzquierda() {
+        puertaIzquierda = !puertaIzquierda;
         actualizarConsumo();
     }
-    
-    void alternarPuertaDerecha() { 
-        puertaDerecha = !puertaDerecha; 
+
+    void alternarPuertaDerecha() {
+        puertaDerecha = !puertaDerecha;
         actualizarConsumo();
     }
-    
-    void alternarMonitor() { 
-        monitorAbierto = !monitorAbierto; 
+
+    void alternarMonitor() {
+        monitorAbierto = !monitorAbierto;
         actualizarConsumo();
     }
 
@@ -53,16 +54,18 @@ public:
         actualizarConsumo();
     }
 
-    // Lógica por ciclo de juego
     void bajarEnergia(float tiempoTranscurrido) {
         if (energia > 0.0f) {
-            
-            energia -= (nivelConsumo * 0.3f) * tiempoTranscurrido;
+            float excesoConsumo = static_cast<float>(std::max(0, nivelConsumo - 1));
+            float tasaConsumo = 0.30f + (0.22f * excesoConsumo) + (0.08f * excesoConsumo * excesoConsumo);
+            energia -= tasaConsumo * tiempoTranscurrido;
             if (energia < 0.0f) energia = 0.0f;
         }
     }
+
     float getEnergia() const { return energia; }
     int getNivelConsumo() const { return nivelConsumo; }
+    int getDispositivosActivos() const { return std::max(0, nivelConsumo - 1); }
     bool esPuertaIzquierdaCerrada() const { return puertaIzquierda; }
     bool esPuertaDerechaCerrada() const { return puertaDerecha; }
     bool esMonitorAbierto() const { return monitorAbierto; }
@@ -70,9 +73,8 @@ public:
     bool esLuzDerechaEncendida() const { return luzDerecha; }
 
 private:
-   
     void actualizarConsumo() {
-        nivelConsumo = 1; 
+        nivelConsumo = 1;
         if (puertaIzquierda) nivelConsumo++;
         if (puertaDerecha) nivelConsumo++;
         if (monitorAbierto) nivelConsumo++;
