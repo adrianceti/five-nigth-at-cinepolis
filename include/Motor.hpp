@@ -52,8 +52,9 @@ private:
     // Indicadores Gráficos del HUD
     sf::RectangleShape barraEnergiaFondo;
     sf::RectangleShape barraEnergiaFrente;
+    std::optional<sf::Text> textoEnergiaHUD;
+    std::optional<sf::Text> textoRelojHUD;
     sf::RectangleShape bloquesConsumo[4]; 
-    sf::RectangleShape bloquesReloj[6];   
 
     // Entidades del juego
     Guardia jugador;
@@ -118,6 +119,18 @@ private:
             }
         }
         return false;
+    }
+
+    void actualizarTextosHUD() {
+        if (!textoEnergiaHUD.has_value() || !textoRelojHUD.has_value()) return;
+
+        int energiaEntera = static_cast<int>(std::clamp(jugador.getEnergia(), 0.0f, 100.0f) + 0.5f);
+        textoEnergiaHUD->setString(std::to_string(energiaEntera) + "%");
+
+        textoRelojHUD->setString(std::to_string(horaActual) + " AM");
+        sf::FloatRect limitesReloj = textoRelojHUD->getLocalBounds();
+        textoRelojHUD->setOrigin({limitesReloj.position.x + limitesReloj.size.x, limitesReloj.position.y});
+        textoRelojHUD->setPosition({1240.0f, 28.0f});
     }
 
     void reproducirSonido(const std::string& clave, float volumen = 75.0f) {
@@ -297,10 +310,7 @@ private:
         vistaOficina.setCenter({posicionCamaraX, 360.0f});
         barraEnergiaFrente.setSize(sf::Vector2f(250.0f, 20.0f));
         barraEnergiaFrente.setFillColor(sf::Color::Green);
-
-        for (int i = 0; i < 6; i++) {
-            bloquesReloj[i].setFillColor(sf::Color(45, 45, 50));
-        }
+        actualizarTextosHUD();
 
         if (spriteOficina.has_value()) {
             spriteOficina.value().setColor(sf::Color::White);
@@ -539,15 +549,8 @@ private:
             barraEnergiaFrente.setFillColor(sf::Color::Green);
         }
 
-        // Actualizar bloques del reloj
-        int horasTranscurridas = (horaActual == 12) ? 0 : horaActual;
-        for (int i = 0; i < 6; i++) {
-            if (i < horasTranscurridas) {
-                bloquesReloj[i].setFillColor(sf::Color::Cyan); 
-            } else {
-                bloquesReloj[i].setFillColor(sf::Color(45, 45, 50)); 
-            }
-        }
+        // Actualizar textos del HUD
+        actualizarTextosHUD();
 
         // Movimiento de la cámara panorámica libre
         if (!jugador.esMonitorAbierto()) {
@@ -776,9 +779,8 @@ private:
                 ventana.draw(bloquesConsumo[i]);
             }
 
-            for (int i = 0; i < 6; i++) {
-                ventana.draw(bloquesReloj[i]);
-            }
+            if (textoEnergiaHUD.has_value()) ventana.draw(textoEnergiaHUD.value());
+            if (textoRelojHUD.has_value()) ventana.draw(textoRelojHUD.value());
         }
         
         ventana.display();
@@ -842,6 +844,21 @@ public:
             "C:/Windows/Fonts/arial.ttf",
             "C:/Windows/Fonts/segoeui.ttf"
         });
+        if (fuenteUICargada) {
+            textoEnergiaHUD.emplace(fuenteUI, "100%", 24);
+            textoEnergiaHUD->setFillColor(sf::Color::White);
+            textoEnergiaHUD->setOutlineColor(sf::Color::Black);
+            textoEnergiaHUD->setOutlineThickness(2.0f);
+            textoEnergiaHUD->setStyle(sf::Text::Bold);
+            textoEnergiaHUD->setPosition({305.0f, 641.0f});
+
+            textoRelojHUD.emplace(fuenteUI, "12 AM", 32);
+            textoRelojHUD->setFillColor(sf::Color::White);
+            textoRelojHUD->setOutlineColor(sf::Color::Black);
+            textoRelojHUD->setOutlineThickness(2.0f);
+            textoRelojHUD->setStyle(sf::Text::Bold);
+            actualizarTextosHUD();
+        }
         
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
@@ -893,15 +910,7 @@ public:
             bloquesConsumo[i].setFillColor(sf::Color::Yellow);
             bloquesConsumo[i].setOutlineColor(sf::Color::Black);
             bloquesConsumo[i].setOutlineThickness(1.0f);
-            bloquesConsumo[i].setPosition(sf::Vector2f(310.0f + (i * 20.0f), 650.0f));
-        }
-
-        // Configuración de los bloques del Reloj
-        for (int i = 0; i < 6; i++) {
-            bloquesReloj[i].setSize(sf::Vector2f(25.0f, 15.0f));
-            bloquesReloj[i].setOutlineColor(sf::Color::White);
-            bloquesReloj[i].setOutlineThickness(1.5f);
-            bloquesReloj[i].setPosition(sf::Vector2f(1050.0f + (i * 32.0f), 30.0f));
+            bloquesConsumo[i].setPosition(sf::Vector2f(390.0f + (i * 20.0f), 650.0f));
         }
 
         // Coordenadas fijas de las puertas en los extremos del mapa virtual
