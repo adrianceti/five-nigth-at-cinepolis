@@ -1414,10 +1414,8 @@ public:
 
         // Cargar audio tenebroso para el menú principal
         if (cargarBufferAudio("menuambiente", {
-            "assets/textures/musica/audio_juego/audioprincipal/ambiente_tenebroso.wav",
-            "../assets/textures/musica/audio_juego/audioprincipal/ambiente_tenebroso.wav",
-            "assets/audio/ambiente_tenebroso.wav",
-            "../assets/audio/ambiente_tenebroso.wav"
+            "assets/textures/musica/audio_juego/ambiente_tenebroso.wav",
+            "../assets/textures/musica/audio_juego/ambiente_tenebroso.wav"
         })) {
             sonidoMenuPrincipal.emplace(buffersAudio.at("menuambiente"));
             sonidoMenuPrincipal->setLooping(true);
