@@ -30,6 +30,8 @@ private:
     std::map<TipoCamara, sf::Texture> texturasFondo;
     std::map<TipoCamara, sf::Color> colorFondoFallback;
     std::map<std::string, sf::Texture> texturasPersonajes;
+    sf::Texture texturaMapaCamaras;
+    bool mapaCamarasCargado;
     
     // Registro de personajes en cada cámara (nombre -> presente)
     std::map<std::string, bool> personajesPorCamara;
@@ -78,6 +80,13 @@ private:
         }
 
         return false;
+    }
+
+    bool cargarMapaCamaras() {
+        return cargarTextureDesdeRutas(texturaMapaCamaras, {
+            "assets/textures/monitor/mapa_camaras.png",
+            "../assets/textures/monitor/mapa_camaras.png"
+        });
     }
 
     // Devuelve el bounding box (rectángulo) de los pixeles no transparentes en la textura
@@ -354,7 +363,8 @@ public:
     MonitorCamaras() 
         : camaraActual(TipoCamara::CAM_01_DULCERIA),
           generadorAleatorio(std::random_device{}()),
-          distribucionEstadistica(0, 100) {
+          distribucionEstadistica(0, 100),
+          mapaCamarasCargado(false) {
         
         // Creamos un rectángulo con marco verde retro
         cajaMapa.setSize(tamanoPantalla());
@@ -366,6 +376,7 @@ public:
         // Cargar texturas y fondos
         cargarTexturasFondo();
         cargarTexturasPersonajes();
+        mapaCamarasCargado = cargarMapaCamaras();
         
         // Inicializar registro de personajes
         std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
@@ -441,6 +452,25 @@ public:
         }
 
         ventana.draw(cajaMapa);
+
+        if (mapaCamarasCargado) {
+            sf::RectangleShape panelMapa({392.f, 302.f});
+            panelMapa.setPosition({870.f, 388.f});
+            panelMapa.setFillColor(sf::Color(0, 0, 0, 170));
+            panelMapa.setOutlineThickness(2.f);
+            panelMapa.setOutlineColor(sf::Color(235, 235, 235, 180));
+            ventana.draw(panelMapa);
+
+            sf::Sprite spriteMapa(texturaMapaCamaras);
+            const sf::Vector2u tamMapa = texturaMapaCamaras.getSize();
+            float escalaX = 380.f / static_cast<float>(tamMapa.x);
+            float escalaY = 290.f / static_cast<float>(tamMapa.y);
+            float escala = std::min(escalaX, escalaY);
+            spriteMapa.setScale({escala, escala});
+            spriteMapa.setPosition({876.f, 394.f});
+            spriteMapa.setColor(sf::Color(255, 255, 255, 240));
+            ventana.draw(spriteMapa);
+        }
     }
 
 private:
