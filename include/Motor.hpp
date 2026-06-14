@@ -1477,6 +1477,7 @@ private:
             return;
         }
 
+        float pulso = luzEncendida ? obtenerPulsoLuzPasillo(esIzquierda) : 0.0f;
         sf::Sprite fondo(*texturaPasillo);
         sf::Vector2u tamano = texturaPasillo->getSize();
         float proporcionZona = zona.size.x / zona.size.y;
@@ -1502,18 +1503,10 @@ private:
             zona.size.y / static_cast<float>(recorte.size.y)
         });
         fondo.setPosition(zona.position);
-        float pulso = luzEncendida ? obtenerPulsoLuzPasillo(esIzquierda) : 0.0f;
         fondo.setColor(luzEncendida
             ? sf::Color(255, 255, 248, 255)
             : sf::Color(170, 174, 182, 255));
         ventana.draw(fondo);
-
-        sf::RectangleShape oscuridad({zona.size.x, zona.size.y});
-        oscuridad.setPosition(zona.position);
-        oscuridad.setFillColor(luzEncendida
-            ? sf::Color(0, 0, 0, 0)
-            : sf::Color(0, 0, 0, 54));
-        ventana.draw(oscuridad);
 
         if (luzEncendida) {
             sf::RectangleShape haz({zona.size.x, zona.size.y});
