@@ -248,6 +248,34 @@ private:
             sonidosActivos.end());
 
         sonidosActivos.emplace_back(buffer->second);
+        sonidosActivos.back().setRelativeToListener(true);
+        sonidosActivos.back().setMinDistance(1.0f);
+        sonidosActivos.back().setAttenuation(0.0f);
+        sonidosActivos.back().setPosition({0.0f, 0.0f, 0.0f});
+        sonidosActivos.back().setPan(0.0f);
+        sonidosActivos.back().setVolume(volumen);
+        sonidosActivos.back().play();
+    }
+
+    void reproducirSonidoEspacial(const std::string& clave, const sf::Vector3f& posicion, float volumen = 75.0f) {
+        auto buffer = buffersAudio.find(clave);
+        if (buffer == buffersAudio.end()) {
+            return;
+        }
+
+        sonidosActivos.erase(
+            std::remove_if(sonidosActivos.begin(), sonidosActivos.end(),
+                           [](const sf::Sound& sonido) {
+                               return sonido.getStatus() == sf::SoundSource::Status::Stopped;
+                           }),
+            sonidosActivos.end());
+
+        sonidosActivos.emplace_back(buffer->second);
+        sonidosActivos.back().setRelativeToListener(true);
+        sonidosActivos.back().setMinDistance(1.0f);
+        sonidosActivos.back().setAttenuation(0.0f);
+        sonidosActivos.back().setPosition(posicion);
+        sonidosActivos.back().setPan(posicion.x < 0.0f ? -1.0f : posicion.x > 0.0f ? 1.0f : 0.0f);
         sonidosActivos.back().setVolume(volumen);
         sonidosActivos.back().play();
     }
@@ -265,11 +293,23 @@ private:
     }
 
     void cargarAudio() {
-        const std::string base = "assets/textures/musica/audio_juego/";
-        const std::string baseAlterna = "../assets/textures/musica/audio_juego/";
+        const std::vector<std::string> bases = {
+            "assets/audio/",
+            "../assets/audio/",
+            "assets/textures/musica/audio_juego/",
+            "../assets/textures/musica/audio_juego/"
+        };
+
+        auto rutasDe = [&](const std::string& nombre) {
+            std::vector<std::string> rutas;
+            for (const auto& base : bases) {
+                rutas.push_back(base + nombre);
+            }
+            return rutas;
+        };
 
         audioDisponible = true;
-        if (cargarBufferAudio("ambiente", {base + "ambiente_tenebroso.wav", baseAlterna + "ambiente_tenebroso.wav"})) {
+        if (cargarBufferAudio("ambiente", rutasDe("ambiente_tenebroso.wav"))) {
             sonidoAmbiente.emplace(buffersAudio.at("ambiente"));
             sonidoAmbiente->setLooping(true);
             sonidoAmbiente->setVolume(100.0f);
@@ -280,18 +320,24 @@ private:
 
         std::vector<std::pair<std::string, std::string>> efectos = {
             {"intro", "intro_telefono.wav"},
-            {"puerta", "puerta_metal.wav"},
+            {"puerta", "puerta.wav"},
             {"monitor", "monitor_static.wav"},
             {"camara", "cambio_camara.wav"},
             {"luz_roja", "alerta_luz_roja.wav"},
             {"ataque", "alerta_ataque.wav"},
             {"jumpscare", "jumpscare.wav"},
             {"gameover", "game_over.wav"},
-            {"victoria", "victoria.wav"}
+            {"victoria", "victoria.wav"},
+            {"paso_izq", "paso_izq.wav"},
+            {"paso_der", "paso_der.wav"},
+            {"alerta_puerta", "alerta_puerta.wav"},
+            {"foxy_corriendo", "foxy_corriendo.wav"},
+            {"golpe_puerta", "golpe_puerta.wav"},
+            {"apagon", "apagón.wav"}
         };
 
         for (const auto& efecto : efectos) {
-            if (!cargarBufferAudio(efecto.first, {base + efecto.second, baseAlterna + efecto.second})) {
+            if (!cargarBufferAudio(efecto.first, rutasDe(efecto.second))) {
                 audioDisponible = false;
                 std::cerr << "No se encontro audio: " << efecto.second << std::endl;
             }
@@ -349,11 +395,32 @@ private:
         bool camaraPopyObservada = jugador.esMonitorAbierto() &&
                                    monitor.getCamaraActual() == TipoCamara::CAM_05_BANOS;
 
-        gobo.procesarTickMovimiento(calcularDificultadBasePorPersonaje(gobo));
-        director.procesarTickMovimiento(calcularDificultadBasePorPersonaje(director));
-        popy.procesarTickMovimiento(calcularDificultadBasePorPersonaje(popy), camaraPopyObservada);
-        usher.procesarTickMovimiento(calcularDificultadBasePorPersonaje(usher));
-        stub.procesarTickMovimiento(calcularDificultadBasePorPersonaje(stub));
+        bool movioGobo = gobo.procesarTickMovimiento(calcularDificultadBasePorPersonaje(gobo));
+        bool movioDirector = director.procesarTickMovimiento(calcularDificultadBasePorPersonaje(director));
+        bool movioPopy = popy.procesarTickMovimiento(calcularDificultadBasePorPersonaje(popy), camaraPopyObservada);
+        bool movioUsher = usher.procesarTickMovimiento(calcularDificultadBasePorPersonaje(usher));
+        bool movioStub = stub.procesarTickMovimiento(calcularDificultadBasePorPersonaje(stub));
+
+        if (movioGobo) {
+            if (gobo.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 60.0f);
+            else reproducirSonidoEspacial("paso_izq", {-1.0f, 0.0f, 0.0f}, 52.0f);
+        }
+        if (movioDirector) {
+            if (director.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {1.0f, 0.0f, 0.0f}, 60.0f);
+            else reproducirSonidoEspacial("paso_der", {1.0f, 0.0f, 0.0f}, 52.0f);
+        }
+        if (movioPopy) {
+            if (popy.esEnLaPuerta()) reproducirSonidoEspacial("foxy_corriendo", {1.0f, 0.0f, 0.0f}, 78.0f);
+            else reproducirSonidoEspacial("paso_der", {1.0f, 0.0f, 0.0f}, 48.0f);
+        }
+        if (movioUsher) {
+            if (usher.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 58.0f);
+            else reproducirSonidoEspacial("paso_izq", {-1.0f, 0.0f, 0.0f}, 48.0f);
+        }
+        if (movioStub) {
+            if (stub.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 58.0f);
+            else reproducirSonidoEspacial("paso_izq", {-1.0f, 0.0f, 0.0f}, 48.0f);
+        }
 
         if (gobo.esEstaAdentro()) {
             iniciarAtaque(gobo.getNombre());
@@ -510,7 +577,7 @@ private:
             sonido.stop();
         }
         sonidosActivos.clear();
-        reproducirSonido("gameover", 46.0f);
+        reproducirSonido("apagon", 46.0f);
     }
 
     void resetearPartida() {
@@ -755,17 +822,28 @@ private:
         jugador.bajarEnergia(dt);
         actualizarInterferenciaMonitor();
 
-        gobo.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
-        director.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esLuzDerechaEncendida());
-        popy.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
-        usher.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
-        stub.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoGobo = gobo.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoDirector = director.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esLuzDerechaEncendida());
+        EventoPuerta eventoPopy = popy.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoUsher = usher.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoStub = stub.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
 
-        if (gobo.esEstaAdentro()) { iniciarAtaque(gobo.getNombre()); return; }
-        if (director.esEstaAdentro()) { iniciarAtaque(director.getNombre()); return; }
-        if (popy.esEstaAdentro()) { iniciarAtaque(popy.getNombre()); return; }
-        if (usher.esEstaAdentro()) { iniciarAtaque(usher.getNombre()); return; }
-        if (stub.esEstaAdentro()) { iniciarAtaque(stub.getNombre()); return; }
+        if (eventoGobo == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 68.0f);
+        if (eventoDirector == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 68.0f);
+        if (eventoPopy == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 70.0f);
+        if (eventoUsher == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 66.0f);
+        if (eventoStub == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 66.0f);
+
+        if (eventoGobo == EventoPuerta::Entrada) { iniciarAtaque(gobo.getNombre()); return; }
+        if (eventoDirector == EventoPuerta::Entrada) { iniciarAtaque(director.getNombre()); return; }
+        if (eventoPopy == EventoPuerta::Entrada) { iniciarAtaque(popy.getNombre()); return; }
+        if (eventoUsher == EventoPuerta::Entrada) { iniciarAtaque(usher.getNombre()); return; }
+        if (eventoStub == EventoPuerta::Entrada) { iniciarAtaque(stub.getNombre()); return; }
+
+        if (jugador.getEnergia() <= 0.0f) {
+            pasarAGameOver();
+            return;
+        }
 
         if (introNoche1Activa) {
             acumuladorTickIA = 0.0f;
@@ -1203,6 +1281,8 @@ public:
               controlesBloqueados(false) { // Espacio panorámico ideal para que funcione el paneo
                   
         std::srand(static_cast<unsigned int>(std::time(nullptr))); 
+        sf::Listener::setPosition({0.0f, 0.0f, 0.0f});
+        sf::Listener::setDirection({0.0f, 0.0f, -1.0f});
         generarTexturaInterferenciaMonitor();
         retrasoAtaque = 0.0f;
         atacanteActual.clear();
