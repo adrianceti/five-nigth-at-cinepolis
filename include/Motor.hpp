@@ -16,6 +16,7 @@
 #include "Personaje.hpp" 
 
 enum class EstadoJuego {
+    MenuPrincipal,
     Jugando,
     AtaquePendiente,
     Jumpscare,
@@ -29,6 +30,8 @@ private:
 
     sf::Texture texturaOficina;
     std::optional<sf::Sprite> spriteOficina;
+    sf::Texture texturaMenuPrincipal;
+    std::optional<sf::Sprite> spriteMenuPrincipal;
     sf::Font fuenteUI;
     bool fuenteUICargada;
 
@@ -98,6 +101,7 @@ private:
     std::map<std::string, sf::SoundBuffer> buffersAudio;
     std::optional<sf::Sound> sonidoIntroNoche1;
     std::optional<sf::Sound> sonidoAmbiente;
+    std::optional<sf::Sound> sonidoMenuPrincipal;
     std::vector<sf::Sound> sonidosActivos;
     bool audioDisponible;
     bool introNoche1Reproducido;
@@ -690,6 +694,21 @@ private:
                 ventana.close();
             }
 
+            // En menú principal: clic para iniciar
+            if (estadoJuego == EstadoJuego::MenuPrincipal) {
+                if (evento->is<sf::Event::MouseButtonPressed>()) {
+                    // Detener música del menú
+                    if (sonidoMenuPrincipal.has_value()) {
+                        sonidoMenuPrincipal->stop();
+                    }
+                    estadoJuego = EstadoJuego::Jugando;
+                    relojNoche.restart();
+                    relojEnergia.restart();
+                    controlesBloqueados = false;
+                }
+                continue;
+            }
+
             if (const auto* botonPresionado = evento->getIf<sf::Event::KeyPressed>()) {
                 if (estadoJuego == EstadoJuego::GameOver) {
                     if (botonPresionado->code == sf::Keyboard::Key::R) {
@@ -748,6 +767,14 @@ private:
     }
 
     void actualizar() {
+        // Durante el menú principal, asegurar que la música esté reproduciéndose
+        if (estadoJuego == EstadoJuego::MenuPrincipal) {
+            if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
+                sonidoMenuPrincipal->play();
+            }
+            return;
+        }
+
         float dt = relojEnergia.restart().asSeconds();
 
         if (estadoJuego == EstadoJuego::Jumpscare) {
@@ -1120,6 +1147,17 @@ private:
     }
 
     void renderizar() {
+        // Mostrar menú principal
+        if (estadoJuego == EstadoJuego::MenuPrincipal) {
+            ventana.clear(sf::Color::Black);
+            ventana.setView(vistaInterfaz);
+            if (spriteMenuPrincipal.has_value()) {
+                ventana.draw(spriteMenuPrincipal.value());
+            }
+            ventana.display();
+            return;
+        }
+
         if (estadoJuego == EstadoJuego::Victoria) {
             renderizarVictoria();
             return;
@@ -1269,7 +1307,7 @@ public:
               relojInterferenciaMonitor(),
               relojParpadeoInterferencia(),
               relojNoche(),
-              estadoJuego(EstadoJuego::Jugando),
+              estadoJuego(EstadoJuego::MenuPrincipal),
               horaActual(12),
               tiempoPorHora(120.0f),  // Cada hora dura 120 segundos (2 minutos) - Total: ~12 minutos para 6 noches
               acumuladorHora(0.0f),
@@ -1329,6 +1367,26 @@ public:
         vistaInterfaz.setSize({1280.0f, 720.0f});
         vistaInterfaz.setCenter({640.0f, 360.0f});
 
+        // Cargar menú principal
+        if (!cargarTextureDesdeRutas(texturaMenuPrincipal, {
+            "assets/textures/menuprincipal/menuprincipal.png",
+            "../assets/textures/menuprincipal/menuprincipal.png"
+        })) {
+            std::cerr << "Advertencia: No se encontró textura de menú principal" << std::endl;
+        } else {
+            spriteMenuPrincipal.emplace(texturaMenuPrincipal);
+            // Escalar la imagen para llenar la pantalla
+            const auto tamTextura = texturaMenuPrincipal.getSize();
+            float escalaX = 1280.0f / static_cast<float>(tamTextura.x);
+            float escalaY = 720.0f / static_cast<float>(tamTextura.y);
+            float escala = std::max(escalaX, escalaY);
+            spriteMenuPrincipal->setScale({escala, escala});
+            spriteMenuPrincipal->setPosition({
+                (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
+                (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
+            });
+        }
+
         if (!cargarTextureDesdeRutas(texturaOficina, {
             "assets/textures/oficina/oficina2.png",
             "../assets/textures/oficina/oficina2.png",
@@ -1353,6 +1411,22 @@ public:
         cargarTexturasPersonajesPuerta();
         cargarTexturasJumpscare();
         cargarAudio();
+
+        // Cargar audio tenebroso para el menú principal
+        if (cargarBufferAudio("menuambiente", {
+            "assets/textures/musica/audio_juego/audioprincipal/ambiente_tenebroso.wav",
+            "../assets/textures/musica/audio_juego/audioprincipal/ambiente_tenebroso.wav",
+            "assets/audio/ambiente_tenebroso.wav",
+            "../assets/audio/ambiente_tenebroso.wav"
+        })) {
+            sonidoMenuPrincipal.emplace(buffersAudio.at("menuambiente"));
+            sonidoMenuPrincipal->setLooping(true);
+            sonidoMenuPrincipal->setVolume(70.0f);
+            sonidoMenuPrincipal->play();
+            std::cerr << "✓ Música del menú principal cargada" << std::endl;
+        } else {
+            std::cerr << "⚠ No se encontró audio tenebroso para el menú" << std::endl;
+        }
 
         // Configuración visual del medidor de batería
         barraEnergiaFondo.setSize(sf::Vector2f(250.0f, 20.0f));
