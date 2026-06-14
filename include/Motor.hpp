@@ -1581,13 +1581,21 @@ public:
         }
 
 
-        pasilloIzquierdoCargado = spriteOficina.has_value();
-        if (pasilloIzquierdoCargado) {
+        pasilloIzquierdoCargado = cargarTextureDesdeRutas(texturaPasilloIzquierda, {
+            "assets/textures/oficina/saladeproyeccion1/saledefondo1.png",
+            "../assets/textures/oficina/saladeproyeccion1/saledefondo1.png"
+        });
+        if (!pasilloIzquierdoCargado && spriteOficina.has_value()) {
             texturaPasilloIzquierda = texturaOficina;
+            pasilloIzquierdoCargado = true;
         }
-        pasilloDerechoCargado = spriteOficina.has_value();
-        if (pasilloDerechoCargado) {
+        pasilloDerechoCargado = cargarTextureDesdeRutas(texturaPasilloDerecha, {
+            "assets/textures/oficina/saladeproyeccion1/saladeproyeccion2/saladefondo2.png",
+            "../assets/textures/oficina/saladeproyeccion1/saladeproyeccion2/saladefondo2.png"
+        });
+        if (!pasilloDerechoCargado && spriteOficina.has_value()) {
             texturaPasilloDerecha = texturaOficina;
+            pasilloDerechoCargado = true;
         }
 
 
