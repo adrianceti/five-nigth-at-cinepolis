@@ -4,7 +4,7 @@
 #include <SFML/Audio.hpp>
 #include <optional>
 #include <iostream>
-#include <ctime>      
+#include <ctime>
 #include <map>
 #include <filesystem>
 #include <vector>
@@ -13,7 +13,7 @@
 #include <cstdint>
 #include "Guardia.hpp"
 #include "MonitorCamaras.hpp"
-#include "Personaje.hpp" 
+#include "Personaje.hpp"
 
 enum class EstadoJuego {
     MenuPrincipal,
@@ -39,42 +39,42 @@ private:
     sf::Font fuenteUI;
     bool fuenteUICargada;
 
-    // Control de Cámara (Vista)
+
     sf::View vistaOficina;
-    sf::View vistaInterfaz; 
+    sf::View vistaInterfaz;
     float posicionCamaraX;
     float velocidadCamara;
-    float anchoVirtualOficina; // Ancho objetivo para forzar el paneo panorámico
+    float anchoVirtualOficina;
 
-    // Componentes Visuales de las Puertas
+
     sf::RectangleShape visualPuertaIzquierda;
     sf::RectangleShape visualPuertaDerecha;
 
-    // Sistema de iluminación de pasillos (sprites y texturas)
+
     std::map<std::string, sf::Texture> texturasPersonajesPuerta;
     std::map<std::string, sf::Sprite> spritesPersonajesPuerta;
     std::map<std::string, sf::Texture> texturasJumpscare;
     sf::RectangleShape marcoLuzIzquierda;
     sf::RectangleShape marcoLuzDerecha;
 
-    // Indicadores Gráficos del HUD
+
     sf::RectangleShape barraEnergiaFondo;
     sf::RectangleShape barraEnergiaFrente;
     std::optional<sf::Text> textoEnergiaHUD;
     std::optional<sf::Text> textoRelojHUD;
-    sf::RectangleShape bloquesConsumo[4]; 
+    sf::RectangleShape bloquesConsumo[4];
     sf::Texture texturaInterferenciaMonitor;
 
-    // Entidades del juego
+
     Guardia jugador;
-    MonitorCamaras monitor; 
+    MonitorCamaras monitor;
     Gobo gobo;
     Director director;
     Popy popy;
     TheUsher usher;
-    TicketyStub stub; 
+    TicketyStub stub;
 
-    // Relojes de control
+
     sf::Clock relojEnergia;
     sf::Clock relojTerminal;
     sf::Clock relojEstado;
@@ -83,15 +83,15 @@ private:
     sf::Clock relojInterferenciaMonitor;
     sf::Clock relojParpadeoInterferencia;
     sf::Clock relojTickIA;
-    
-    // Control del Tiempo y Victoria
+
+
     sf::Clock relojNoche;
     EstadoJuego estadoJuego;
-    int horaActual;             
-    float tiempoPorHora;        
-    float acumuladorHora;       
+    int horaActual;
+    float tiempoPorHora;
+    float acumuladorHora;
     bool juegoTerminado;
-    bool victoria;              
+    bool victoria;
     float tiempoMuerteAcumulado;
     float retrasoAtaque;
     std::string atacanteActual;
@@ -473,7 +473,7 @@ private:
         return false;
     }
 
-    // Devuelve el bounding box (rectángulo) de los pixeles no transparentes en la textura
+
     sf::IntRect obtenerBoundingBoxAlpha(const sf::Texture& textura) {
         sf::Image img = textura.copyToImage();
         unsigned int w = img.getSize().x;
@@ -482,7 +482,7 @@ private:
 
         for (unsigned int y = 0; y < h; ++y) {
             for (unsigned int x = 0; x < w; ++x) {
-                if (img.getPixel(sf::Vector2u(x, y)).a > 8) { // consider alpha > ~3% as opaque
+                if (img.getPixel(sf::Vector2u(x, y)).a > 8) {
                     if (static_cast<int>(x) < minX) minX = x;
                     if (static_cast<int>(y) < minY) minY = y;
                     if (static_cast<int>(x) > maxX) maxX = x;
@@ -644,25 +644,25 @@ private:
     }
 
     void cargarTexturasPersonajesPuerta() {
-        // Cargar sprites de personajes para mostrar en las puertas
+
         std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
         std::vector<std::string> carpetas = {"gobo", "director", "popy", "theusher", "ticketystub"};
-        
+
         for (size_t i = 0; i < personajes.size(); i++) {
             std::string rutaPersonaje = "assets/textures/personajes/" + carpetas[i] + "/";
             std::string rutaSpriteAnterior = rutaPersonaje + "sprite" + carpetas[i] + "/";
-            
+
             sf::Texture textura;
             bool cargada = false;
-            
-            // Intentar múltiples variantes de nombre de archivo
+
+
             std::vector<std::string> nombresPosibles = {
                 carpetas[i] + ".png",
                 "sprite.png",
                 personajes[i] + ".png",
                 "sprite" + carpetas[i] + ".png"
             };
-            
+
             for (const auto& nombre : nombresPosibles) {
                 std::vector<std::string> rutas = {
                     rutaPersonaje + nombre,
@@ -676,17 +676,17 @@ private:
                     break;
                 }
             }
-            
+
             if (cargada) {
                 auto texturaInsertada = texturasPersonajesPuerta.insert_or_assign(personajes[i], textura);
                 sf::Sprite sprite(texturaInsertada.first->second);
-                // Normalizar escala basándonos en el bounding box real (sin transparencias)
+
                 sf::IntRect bbox = obtenerBoundingBoxAlpha(texturaInsertada.first->second);
-                const float alturaObjetivoPuerta = 300.0f; // píxeles de altura objetivo en pantalla
+                const float alturaObjetivoPuerta = 300.0f;
                 float escala = 1.0f;
                 if (bbox.size.y > 0) escala = alturaObjetivoPuerta / static_cast<float>(bbox.size.y);
                 sprite.setScale({escala, escala});
-                // Origen en la base del bounding box para posicionarlo sobre el "suelo" de la escena
+
                 sprite.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.0f, static_cast<float>(bbox.position.y + bbox.size.y)});
                 spritesPersonajesPuerta.insert({personajes[i], sprite});
             } else {
@@ -707,10 +707,10 @@ private:
                 ventana.close();
             }
 
-            // En menú principal: clic para iniciar
+
             if (estadoJuego == EstadoJuego::MenuPrincipal) {
                 if (evento->is<sf::Event::MouseButtonPressed>()) {
-                    // Detener música del menú
+
                     if (sonidoMenuPrincipal.has_value()) {
                         sonidoMenuPrincipal->stop();
                     }
@@ -767,13 +767,13 @@ private:
                     jugador.alternarPuertaDerecha();
                     reproducirSonido("puerta", 34.0f);
                 }
-                
+
                 if (botonPresionado->code == sf::Keyboard::Key::Space) {
                     jugador.alternarMonitor();
                     reproducirSonido("monitor", 26.0f);
                 }
 
-                // Luces de pasillo - Q para izquierda, E para derecha
+
                 if (botonPresionado->code == sf::Keyboard::Key::Q) {
                     bool estabaApagada = !jugador.esLuzIzquierdaEncendida();
                     jugador.alternarLuzIzquierda();
@@ -801,7 +801,7 @@ private:
     }
 
     void actualizar() {
-        // Durante el menú principal, asegurar que la música esté reproduciéndose
+
         if (estadoJuego == EstadoJuego::MenuPrincipal) {
             if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
                 sonidoMenuPrincipal->play();
@@ -837,13 +837,13 @@ private:
 
             if (!jugador.esMonitorAbierto()) {
                 sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
-                
+
                 if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
                     if (posicionMouse.x > 1000) posicionCamaraX += velocidadCamara * dt;
                     else if (posicionMouse.x < 280) posicionCamaraX -= velocidadCamara * dt;
 
                     if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
-                    if (posicionCamaraX > (anchoVirtualOficina - 640.0f)) posicionCamaraX = anchoVirtualOficina - 640.0f; 
+                    if (posicionCamaraX > (anchoVirtualOficina - 640.0f)) posicionCamaraX = anchoVirtualOficina - 640.0f;
 
                     vistaOficina.setCenter({posicionCamaraX, 360.0f});
                 }
@@ -851,7 +851,7 @@ private:
             return;
         }
 
-        // Lógica del Tiempo de la Noche
+
         if (!introNoche1Reproducido && horaActual == 12) {
             iniciarIntroNoche1();
         }
@@ -920,7 +920,7 @@ private:
         }
 
         #if 0
-        // Actualizar a todos los personajes
+
         bool puedeMoverIA = !introNoche1Activa;
         CurvaDificultadHoraria curvaIA = obtenerCurvaDificultadHoraria();
         bool huboMovimientoIA = false;
@@ -934,7 +934,7 @@ private:
             activarInterferenciaMonitor();
         }
 
-        // Verificar si algún personaje logró entrar
+
         if (gobo.esEstaAdentro()) {
             iniciarAtaque(gobo.getNombre());
             return;
@@ -957,7 +957,7 @@ private:
         }
         #endif
 
-        // Actualizar barra de energía
+
         float porcentajeEnergia = jugador.getEnergia() / 100.0f;
         if (porcentajeEnergia < 0.0f) porcentajeEnergia = 0.0f;
         barraEnergiaFrente.setSize(sf::Vector2f(250.0f * porcentajeEnergia, 20.0f));
@@ -968,20 +968,20 @@ private:
             barraEnergiaFrente.setFillColor(sf::Color::Green);
         }
 
-        // Actualizar textos del HUD
+
         actualizarTextosHUD();
 
-        // Movimiento de la cámara panorámica libre
+
         if (!jugador.esMonitorAbierto()) {
             sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
-            
+
             if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
                 if (posicionMouse.x > 1000) posicionCamaraX += velocidadCamara * dt;
                 else if (posicionMouse.x < 280) posicionCamaraX -= velocidadCamara * dt;
 
-                // Límites basados en el ancho virtual de 1600 para permitir el paneo lateral
+
                 if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
-                if (posicionCamaraX > (anchoVirtualOficina - 640.0f)) posicionCamaraX = anchoVirtualOficina - 640.0f; 
+                if (posicionCamaraX > (anchoVirtualOficina - 640.0f)) posicionCamaraX = anchoVirtualOficina - 640.0f;
 
                 vistaOficina.setCenter({posicionCamaraX, 360.0f});
             }
@@ -997,16 +997,16 @@ private:
             std::cout << "  RELOJ DE LA NOCHE : " << horaActual << " AM \n";
             std::cout << "  ENERGIA RESTANTE  : " << static_cast<int>(jugador.getEnergia()) << "%\n";
             std::cout << "=========================================\n";
-            
-            // Mostrar amenazas activas
+
+
             std::cout << "  AMENAZAS ACTIVAS:\n";
             if (gobo.esEnLaPuerta()) std::cout << "    [!] " << gobo.getNombre() << " EN LA PUERTA IZQ\n";
             if (director.esEnLaPuerta()) std::cout << "    [!] " << director.getNombre() << " EN LA PUERTA DER\n";
             if (usher.esEnLaPuerta()) std::cout << "    [!] " << usher.getNombre() << " EN LA PUERTA IZQ\n";
             if (stub.esEnLaPuerta()) std::cout << "    [!] " << stub.getNombre() << " EN LA PUERTA IZQ\n";
             if (popy.esEnLaPuerta()) std::cout << "    [!] " << popy.getNombre() << " EN LA PUERTA DER\n";
-            
-            if (!gobo.esEnLaPuerta() && !director.esEnLaPuerta() && !popy.esEnLaPuerta() && 
+
+            if (!gobo.esEnLaPuerta() && !director.esEnLaPuerta() && !popy.esEnLaPuerta() &&
                 !usher.esEnLaPuerta() && !stub.esEnLaPuerta()) {
                 std::cout << "    [OK] Ninguna amenaza activa\n";
             }
@@ -1016,9 +1016,9 @@ private:
 
         if (spriteOficina.has_value()) {
             if (jugador.getEnergia() <= 0.0f) {
-                spriteOficina.value().setColor(sf::Color(10, 10, 30)); 
+                spriteOficina.value().setColor(sf::Color(10, 10, 30));
             } else if (gobo.esEnLaPuerta() || director.esEnLaPuerta() || usher.esEnLaPuerta() || stub.esEnLaPuerta()) {
-                spriteOficina.value().setColor(sf::Color(255, 180, 180)); 
+                spriteOficina.value().setColor(sf::Color(255, 180, 180));
             } else {
                 spriteOficina.value().setColor(sf::Color::White);
             }
@@ -1073,7 +1073,7 @@ private:
         panel.setOutlineThickness(4.0f);
         ventana.draw(panel);
 
-        // Texto dibujado como bloques para evitar depender de una fuente externa.
+
         sf::RectangleShape barra(sf::Vector2f(460.0f, 18.0f));
         barra.setFillColor(sf::Color(190, 0, 0));
         barra.setPosition({410.0f, 315.0f});
@@ -1181,7 +1181,7 @@ private:
     }
 
     void renderizar() {
-        // Mostrar menú principal
+
         if (estadoJuego == EstadoJuego::MenuPrincipal) {
             ventana.clear(sf::Color::Black);
             ventana.setView(vistaInterfaz);
@@ -1209,12 +1209,12 @@ private:
 
         if (jugador.esMonitorAbierto()) {
             int tonoVerde = 30 + static_cast<int>(monitor.getCamaraActual()) * 15;
-            ventana.clear(sf::Color(10, tonoVerde, 15)); 
+            ventana.clear(sf::Color(10, tonoVerde, 15));
         } else {
             ventana.clear(sf::Color::Black);
         }
-        
-        // 1. DIBUJAR ENTORNO (Móvil)
+
+
         ventana.setView(vistaOficina);
         if (!jugador.esMonitorAbierto()) {
             if (spriteOficina.has_value()) {
@@ -1224,7 +1224,7 @@ private:
             dibujarPuertaOficina(ventana, true, jugador.esPuertaIzquierdaCerrada());
             dibujarPuertaOficina(ventana, false, jugador.esPuertaDerechaCerrada());
 
-            // Renderizar personajes en las puertas si tienen luz encendida
+
             if (jugador.esLuzIzquierdaEncendida()) {
                 ventana.draw(marcoLuzIzquierda);
                 if (!jugador.esPuertaIzquierdaCerrada()) {
@@ -1233,7 +1233,7 @@ private:
                     if (stub.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, stub.getNombre(), true);
                 }
             }
-            
+
             if (jugador.esLuzDerechaEncendida()) {
                 ventana.draw(marcoLuzDerecha);
                 if (!jugador.esPuertaDerechaCerrada()) {
@@ -1242,16 +1242,16 @@ private:
                 }
             }
         }
-        
-        // 2. DIBUJAR INTERFAZ (Fija)
-        ventana.setView(vistaInterfaz); 
+
+
+        ventana.setView(vistaInterfaz);
         if (jugador.esMonitorAbierto()) {
             monitor.renderizar(ventana);
             if (interferenciaMonitorActiva) {
                 dibujarInterferenciaMonitor();
             } else {
-            
-            // Mostrar personajes en la cámara actual del monitor
+
+
             if (gobo.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Gobo");
             if (director.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Director");
             if (popy.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Popy");
@@ -1293,7 +1293,7 @@ private:
             if (textoEnergiaHUD.has_value()) ventana.draw(textoEnergiaHUD.value());
             if (textoRelojHUD.has_value()) ventana.draw(textoRelojHUD.value());
         }
-        
+
         ventana.display();
     }
 
@@ -1413,13 +1413,13 @@ private:
 
         if (spritesPersonajesPuerta.find(clave) != spritesPersonajesPuerta.end()) {
             sf::Sprite sprite = spritesPersonajesPuerta.at(clave);
-            
+
             if (esIzquierda) {
                 sprite.setPosition(sf::Vector2f(160.0f, 650.0f));
             } else {
                 sprite.setPosition(sf::Vector2f(anchoVirtualOficina - 160.0f, 650.0f));
             }
-            
+
             ventana.draw(sprite);
         }
     }
@@ -1439,10 +1439,10 @@ public:
               marcoLuzDerecha(),
               barraEnergiaFondo(),
               barraEnergiaFrente(),
-              gobo(12), 
-              director(14), 
-              popy(10), 
-              usher(16), 
+              gobo(12),
+              director(14),
+              popy(10),
+              usher(16),
               stub(8),
               relojEnergia(),
               relojTerminal(),
@@ -1454,7 +1454,7 @@ public:
               relojNoche(),
               estadoJuego(EstadoJuego::MenuPrincipal),
               horaActual(12),
-              tiempoPorHora(120.0f),  // Cada hora dura 120 segundos (2 minutos) - Total: ~12 minutos para 6 noches
+              tiempoPorHora(120.0f),
               acumuladorHora(0.0f),
               juegoTerminado(false),
               victoria(false),
@@ -1464,9 +1464,9 @@ public:
               fotogramaInterferenciaMonitor(0),
               intervaloTickIA(5.0f),
               acumuladorTickIA(0.0f),
-              controlesBloqueados(false) { // Espacio panorámico ideal para que funcione el paneo
-                  
-        std::srand(static_cast<unsigned int>(std::time(nullptr))); 
+              controlesBloqueados(false) {
+
+        std::srand(static_cast<unsigned int>(std::time(nullptr)));
         sf::Listener::setPosition({0.0f, 0.0f, 0.0f});
         sf::Listener::setDirection({0.0f, 0.0f, -1.0f});
         generarTexturaInterferenciaMonitor();
@@ -1498,21 +1498,21 @@ public:
             textoRelojHUD->setStyle(sf::Text::Bold);
             actualizarTextosHUD();
         }
-        
+
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
 
-        // Configuración de las vistas
-        posicionCamaraX = anchoVirtualOficina / 2.0f; // Centrado perfecto en 820.0f
-        velocidadCamara = 600.0f; 
-        
+
+        posicionCamaraX = anchoVirtualOficina / 2.0f;
+        velocidadCamara = 600.0f;
+
         vistaOficina.setSize({1280.0f, 720.0f});
         vistaOficina.setCenter({posicionCamaraX, 360.0f});
 
         vistaInterfaz.setSize({1280.0f, 720.0f});
         vistaInterfaz.setCenter({640.0f, 360.0f});
 
-        // Cargar menú principal
+
         if (!cargarTextureDesdeRutas(texturaMenuPrincipal, {
             "assets/textures/menuprincipal/menuprincipal.png",
             "../assets/textures/menuprincipal/menuprincipal.png"
@@ -1520,7 +1520,7 @@ public:
             std::cerr << "Advertencia: No se encontró textura de menú principal" << std::endl;
         } else {
             spriteMenuPrincipal.emplace(texturaMenuPrincipal);
-            // Escalar la imagen para llenar la pantalla
+
             const auto tamTextura = texturaMenuPrincipal.getSize();
             float escalaX = 1280.0f / static_cast<float>(tamTextura.x);
             float escalaY = 720.0f / static_cast<float>(tamTextura.y);
@@ -1543,16 +1543,16 @@ public:
             std::cerr << "Error: No se encontro assets/textures/oficina.png" << std::endl;
         } else {
             spriteOficina.emplace(texturaOficina);
-            
-            // Forzamos a la imagen a estirarse sutilmente a nivel panorámico (1640x720)
-            // Esto garantiza que el mouse sí pueda mover la cámara a los lados pase lo que pase
+
+
+
             spriteOficina.value().setScale({
                 anchoVirtualOficina / static_cast<float>(texturaOficina.getSize().x),
                 720.0f / static_cast<float>(texturaOficina.getSize().y)
             });
         }
 
-        // Usar la misma imagen de oficina para los fondos de puerta en lugar de los pasillos
+
         pasilloIzquierdoCargado = spriteOficina.has_value();
         if (pasilloIzquierdoCargado) {
             texturaPasilloIzquierda = texturaOficina;
@@ -1562,12 +1562,12 @@ public:
             texturaPasilloDerecha = texturaOficina;
         }
 
-        // Cargar texturas de personajes para las puertas
+
         cargarTexturasPersonajesPuerta();
         cargarTexturasJumpscare();
         cargarAudio();
 
-        // Cargar audio tenebroso para el menú principal
+
         if (cargarBufferAudio("menuambiente", {
             "assets/textures/musica/audio_juego/ambiente_tenebroso.wav",
             "../assets/textures/musica/audio_juego/ambiente_tenebroso.wav"
@@ -1581,7 +1581,7 @@ public:
             std::cerr << "⚠ No se encontró audio tenebroso para el menú" << std::endl;
         }
 
-        // Configuración visual del medidor de batería
+
         barraEnergiaFondo.setSize(sf::Vector2f(250.0f, 20.0f));
         barraEnergiaFondo.setFillColor(sf::Color(50, 50, 50));
         barraEnergiaFondo.setOutlineColor(sf::Color::White);
@@ -1600,20 +1600,20 @@ public:
             bloquesConsumo[i].setPosition(sf::Vector2f(390.0f + (i * 20.0f), 650.0f));
         }
 
-        // Coordenadas fijas de las puertas en los extremos del mapa virtual
+
         visualPuertaIzquierda.setSize(sf::Vector2f(360.0f, 720.0f));
-        visualPuertaIzquierda.setFillColor(sf::Color::Transparent); 
+        visualPuertaIzquierda.setFillColor(sf::Color::Transparent);
         visualPuertaIzquierda.setOutlineColor(sf::Color(80, 80, 80));
         visualPuertaIzquierda.setOutlineThickness(3.0f);
-        visualPuertaIzquierda.setPosition(sf::Vector2f(0.0f, 0.0f)); // Extremo izquierdo absoluto
+        visualPuertaIzquierda.setPosition(sf::Vector2f(0.0f, 0.0f));
 
         visualPuertaDerecha.setSize(sf::Vector2f(360.0f, 720.0f));
         visualPuertaDerecha.setFillColor(sf::Color::Transparent);
         visualPuertaDerecha.setOutlineColor(sf::Color(80, 80, 80));
         visualPuertaDerecha.setOutlineThickness(3.0f);
-        visualPuertaDerecha.setPosition(sf::Vector2f(anchoVirtualOficina - 360.0f, 0.0f)); // Extremo derecho absoluto
+        visualPuertaDerecha.setPosition(sf::Vector2f(anchoVirtualOficina - 360.0f, 0.0f));
 
-        // Configuración de marcos de luz de pasillo
+
         marcoLuzIzquierda.setSize(sf::Vector2f(220.0f, 400.0f));
         marcoLuzIzquierda.setFillColor(sf::Color::Transparent);
         marcoLuzIzquierda.setOutlineColor(sf::Color(200, 200, 100, 100));

@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <cctype>
 #include <algorithm>
-// Enumerado para las distintas zonas de Cinépolis
+
 enum class TipoCamara {
     CAM_01_DULCERIA,
     CAM_02_PASILLO_A,
@@ -25,13 +25,13 @@ private:
     mutable std::mt19937 generadorAleatorio;
     mutable std::uniform_int_distribution<int> distribucionEstadistica;
 
-    // Sistema de texturas y renderización
+
     std::map<TipoCamara, sf::Texture> texturasFondo;
     std::map<TipoCamara, sf::Color> colorFondoFallback;
     std::map<std::string, sf::Texture> texturasPersonajes;
     sf::Texture texturaMapaCamaras;
     bool mapaCamarasCargado;
-    
+
     std::map<std::string, bool> personajesPorCamara;
     std::map<std::string, sf::Sprite> spritesPersonajes;
 
@@ -87,7 +87,7 @@ private:
         });
     }
 
-    // Devuelve el bounding box (rectángulo) de los pixeles no transparentes en la textura
+
     sf::IntRect obtenerBoundingBoxAlpha(const sf::Texture& textura) const {
         sf::Image img = textura.copyToImage();
         unsigned int w = img.getSize().x;
@@ -162,7 +162,7 @@ private:
 
     void dibujarMiniaturaPersonaje(sf::RenderWindow& ventana, const std::string& nombre, sf::Vector2f centro) const {
         if (!personajePermitido(nombre)) return;
-        
+
         if (camaraActual == TipoCamara::CAM_01_DULCERIA) return;
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
@@ -189,7 +189,7 @@ private:
         }
 
         sf::Sprite sprite(*texturaParaDibujar);
-        
+
         sf::IntRect bbox = obtenerBoundingBoxAlpha(*texturaParaDibujar);
         float escalaX = 86.f / static_cast<float>(bbox.size.x);
         float escalaY = 86.f / static_cast<float>(bbox.size.y);
@@ -212,7 +212,7 @@ private:
                 posicion = {250.f, suelo};
                 maximo = {280.f, 590.f};
             } else if (clave == "Director") {
-                
+
                 posicion = {920.f, 460.f};
                 maximo = {300.f, 420.f};
             } else if (clave == "Popy") {
@@ -276,7 +276,7 @@ private:
     }
 
     void generarEstatica() const {
-        
+
         for (int y = 0; y < 12; y++) {
             std::string fila;
             for (int x = 0; x < 60; x++) {
@@ -292,7 +292,7 @@ private:
     }
 
     void cargarTexturasFondo() {
-        
+
         std::vector<std::pair<TipoCamara, std::vector<std::string>>> camaras = {
             {TipoCamara::CAM_01_DULCERIA, {"assets/textures/camaras/dulceria", "../assets/textures/camaras/dulceria"}},
             {TipoCamara::CAM_02_PASILLO_A, {"assets/textures/camaras/pasillo-a", "../assets/textures/camaras/pasillo-a", "assets/textures/camaras/pasillo_a", "../assets/textures/camaras/pasillo_a"}},
@@ -300,10 +300,10 @@ private:
             {TipoCamara::CAM_04_SALAS, {"assets/textures/camaras/sala1", "../assets/textures/camaras/sala1", "assets/textures/camaras/sala2", "../assets/textures/camaras/sala2"}},
             {TipoCamara::CAM_05_BANOS, {"assets/textures/camaras/baños", "../assets/textures/camaras/baños", "assets/textures/camaras/banos", "../assets/textures/camaras/banos", "assets/textures/camaras/lobby", "../assets/textures/camaras/lobby"}}
         };
-        
+
         for (const auto& camara : camaras) {
             sf::Texture textura;
-            
+
             bool cargada = false;
             std::vector<std::string> candidatos;
             for (const auto& carpeta : camara.second) {
@@ -321,7 +321,7 @@ private:
                 }
             }
 
-            
+
             if (!cargada) {
                 if (cargarPrimeraImagenEnCarpeta(textura, camara.second)) {
                     cargada = true;
@@ -335,36 +335,36 @@ private:
                 std::cerr << "⚠ No se encontró fondo de cámara - usando color de fallback" << std::endl;
             }
         }
-        
-        
-        colorFondoFallback[TipoCamara::CAM_01_DULCERIA] = sf::Color(60, 80, 40);    // Verde oscuro (dulcería)
-        colorFondoFallback[TipoCamara::CAM_02_PASILLO_A] = sf::Color(50, 60, 70);   // Gris azulado (pasillo izq)
-        colorFondoFallback[TipoCamara::CAM_03_PASILLO_B] = sf::Color(50, 60, 70);   // Gris azulado (pasillo der)
-        colorFondoFallback[TipoCamara::CAM_04_SALAS] = sf::Color(70, 50, 50);       // Marrón rojizo (sala)
-        colorFondoFallback[TipoCamara::CAM_05_BANOS] = sf::Color(60, 70, 80);       // Gris frío (baños)
+
+
+        colorFondoFallback[TipoCamara::CAM_01_DULCERIA] = sf::Color(60, 80, 40);
+        colorFondoFallback[TipoCamara::CAM_02_PASILLO_A] = sf::Color(50, 60, 70);
+        colorFondoFallback[TipoCamara::CAM_03_PASILLO_B] = sf::Color(50, 60, 70);
+        colorFondoFallback[TipoCamara::CAM_04_SALAS] = sf::Color(70, 50, 50);
+        colorFondoFallback[TipoCamara::CAM_05_BANOS] = sf::Color(60, 70, 80);
     }
 
     void cargarTexturasPersonajes() {
-        
+
         std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
         std::vector<std::string> carpetas = {"gobo", "director", "popy", "theusher", "ticketystub"};
-        
+
         for (size_t i = 0; i < personajes.size(); i++) {
             std::string rutaPersonaje = "assets/textures/personajes/" + carpetas[i] + "/";
             std::string rutaSpriteAnterior = rutaPersonaje + "sprite" + carpetas[i] + "/";
-            
-            
+
+
             sf::Texture textura;
             bool cargada = false;
-            
-            
+
+
             std::vector<std::string> nombresPosibles = {
                 carpetas[i] + ".png",
                 "sprite.png",
                 personajes[i] + ".png",
                 "sprite" + carpetas[i] + ".png"
             };
-            
+
             for (const auto& nombre : nombresPosibles) {
                 std::vector<std::string> rutas = {
                     rutaPersonaje + nombre,
@@ -378,11 +378,11 @@ private:
                     break;
                 }
             }
-            
+
             if (cargada) {
                 auto texturaInsertada = texturasPersonajes.insert_or_assign(personajes[i], textura);
                 sf::Sprite sprite(texturaInsertada.first->second);
-                sprite.setScale({0.3f, 0.3f}); // Escalar a tamaño visible en monitor
+                sprite.setScale({0.3f, 0.3f});
                 spritesPersonajes.insert_or_assign(personajes[i], sprite);
             } else {
                 std::cerr << "⚠ No se encontró textura para " << personajes[i] << std::endl;
@@ -392,25 +392,25 @@ private:
 
 public:
 
-    MonitorCamaras() 
+    MonitorCamaras()
         : camaraActual(TipoCamara::CAM_01_DULCERIA),
           generadorAleatorio(std::random_device{}()),
           distribucionEstadistica(0, 100),
           mapaCamarasCargado(false) {
-        
-        
+
+
         cajaMapa.setSize(tamanoPantalla());
         cajaMapa.setFillColor(sf::Color(0, 0, 0, 0));
         cajaMapa.setOutlineColor(sf::Color(0, 255, 0));
         cajaMapa.setOutlineThickness(2.f);
         cajaMapa.setPosition(sf::Vector2f(0.f, 0.f));
-        
-        
+
+
         cargarTexturasFondo();
         cargarTexturasPersonajes();
         mapaCamarasCargado = cargarMapaCamaras();
-        
-        
+
+
         std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
         for (const auto& p : personajes) {
             personajesPorCamara[p] = false;
@@ -425,19 +425,19 @@ public:
         return camaraActual;
     }
 
-    // Registrar presencia de personaje en cámara
+
     void registrarPersonajeEnCamara(const std::string& nombre, bool presente) {
         if (personajesPorCamara.find(nombre) != personajesPorCamara.end()) {
             personajesPorCamara[nombre] = presente;
         }
     }
 
-    // Consultar si un personaje está en la cámara actual
+
     bool hayPersonajesEnCamara() const {
-        return false; // Por ahora, será actualizado desde Motor
+        return false;
     }
 
-    // Devuelve el nombre de la cámara como texto para nuestra terminal
+
     std::string getNombreCamaraActual() const {
         switch (camaraActual) {
             case TipoCamara::CAM_01_DULCERIA:  return "CAM_01 - Dulceria Principal";
@@ -449,31 +449,31 @@ public:
         return "Desconocida";
     }
 
-    // Dibuja la interfaz del monitor sobre la ventana
+
     void renderizar(sf::RenderWindow& ventana) {
         sf::Vector2f pantalla = tamanoPantalla();
-        
-        // Dibujar fondo de la cámara (textura o color)
+
+
         if (texturasFondo.find(camaraActual) != texturasFondo.end()) {
-            // Si existe textura, dibujarla
+
             sf::Sprite fondoSprite(texturasFondo.at(camaraActual));
             fondoSprite.setPosition(sf::Vector2f(0.f, 0.f));
-            // Escalar para que quepa en el monitor (360x480)
+
             float escalaX = pantalla.x / texturasFondo.at(camaraActual).getSize().x;
             float escalaY = pantalla.y / texturasFondo.at(camaraActual).getSize().y;
             fondoSprite.setScale({escalaX, escalaY});
             ventana.draw(fondoSprite);
 
-            // Si estamos en Dulcería, dibujar al Director detrás de las palomitas
+
             if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
-                // Intentar obtener textura del Director
+
                 const sf::Texture* texDirector = nullptr;
                 auto it = texturasPersonajes.find(getClaveTexturaPersonaje("Director"));
                 sf::Texture texTemp;
                 if (it != texturasPersonajes.end()) {
                     texDirector = &it->second;
                 } else {
-                    // Priorizar la imagen exacta proporcionada por el usuario
+
                     std::vector<std::string> preferidas = {
                         "assets/textures/personajes/director/7fe9fc08-2881-4e84-92a4-0efea3ba737a_removalai_preview.png",
                         "../assets/textures/personajes/director/7fe9fc08-2881-4e84-92a4-0efea3ba737a_removalai_preview.png"
@@ -482,7 +482,7 @@ public:
                         if (texTemp.loadFromFile(p)) { texDirector = &texTemp; break; }
                     }
 
-                    // Si no existe la preferida, buscar en carpeta de cámara primero
+
                     if (texDirector == nullptr) {
                         std::vector<std::string> posibles = {
                             "assets/textures/camaras/dulceria/director.png",
@@ -494,7 +494,7 @@ public:
                             if (texTemp.loadFromFile(p)) { texDirector = &texTemp; break; }
                         }
                     }
-                    // Si aún no se encontró, intentar en carpeta de personaje
+
                     if (texDirector == nullptr) {
                         std::vector<std::string> rutas = {
                             "assets/textures/personajes/director",
@@ -506,7 +506,7 @@ public:
                 }
 
                 if (texDirector != nullptr) {
-                    // Calcular bounding box y escala según el plano para Dulcería
+
                     sf::IntRect bbox = obtenerBoundingBoxAlpha(*texDirector);
                     sf::Vector2f posicion, maximo;
                     obtenerPlanoPersonaje("Director", posicion, maximo);
@@ -519,21 +519,21 @@ public:
                     spriteDir.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.f,
                                          static_cast<float>(bbox.position.y + bbox.size.y)});
 
-                    // Colocar los pies del Director al ras del suelo del monitor (sin movimiento)
-                    // Como el origen está en la base del sprite, poner la posición Y en el fondo
+
+
                     spriteDir.setPosition(sf::Vector2f(posicion.x, pantalla.y));
                     ventana.draw(spriteDir);
 
-                    // Volver a dibujar la región de las palomitas encima para que el Director quede atrás
-                    // Definimos una región relativa (ajustable) que cubre la caja de palomitas en la imagen
+
+
                     const sf::Texture& texFondo = texturasFondo.at(camaraActual);
                     unsigned int w = texFondo.getSize().x;
                     unsigned int h = texFondo.getSize().y;
-                    // Rectángulo aproximado en coordenadas de textura que cubre la máquina de popcorn (ampliado)
+
                     sf::IntRect rectPop(sf::Vector2i(static_cast<int>(w * 0.00f), static_cast<int>(h * 0.45f)),
                                         sf::Vector2i(static_cast<int>(w * 0.35f), static_cast<int>(h * 0.40f)));
 
-                    // Crear sprite que use sólo esa sub-región y posicionarlo escalado
+
                     sf::Sprite overlay(texFondo);
                     overlay.setTextureRect(rectPop);
                     overlay.setPosition(sf::Vector2f(static_cast<float>(rectPop.position.x) * escalaX,
@@ -543,18 +543,18 @@ public:
                 }
             }
         } else {
-            // Si no existe textura, usar color de fallback
-            sf::Color colorFondo = colorFondoFallback.count(camaraActual) > 0 
+
+            sf::Color colorFondo = colorFondoFallback.count(camaraActual) > 0
                 ? colorFondoFallback.at(camaraActual)
                 : sf::Color(40, 60, 30);
-            
+
             sf::RectangleShape fondoMonitor(pantalla);
             fondoMonitor.setFillColor(colorFondo);
             fondoMonitor.setPosition(sf::Vector2f(0.f, 0.f));
             ventana.draw(fondoMonitor);
         }
-        
-        // Dibuja líneas horizontales (efecto de scanlines)
+
+
         for (float y = 0.0f; y < pantalla.y; y += 20.0f) {
             sf::RectangleShape linea({pantalla.x, 1.0f});
             linea.setPosition({0.0f, y});
@@ -586,7 +586,7 @@ public:
 
 private:
     sf::Color obtenerColorFondo() const {
-        // Esta función ya no es necesaria pero la mantenemos por compatibilidad
+
         if (colorFondoFallback.count(camaraActual) > 0) {
             return colorFondoFallback.at(camaraActual);
         }
@@ -594,15 +594,15 @@ private:
     }
 
     void dibujarPersonajesEnMonitor() {
-        // Este método será llamado desde Motor pasando los personajes activos
-        // Por ahora solo dibuja si hay personajes detectados en la cámara
+
+
     }
 
 public:
-    // Dibuja un personaje específico en el monitor en la posición central
+
     void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre) {
         if (!personajePermitido(nombre)) return;
-        // En Dulcería no se deben dibujar personajes (solo el fondo)
+
         if (camaraActual == TipoCamara::CAM_01_DULCERIA) return;
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
@@ -624,11 +624,11 @@ public:
             }
         }
 
-        // Si no existe textura en `texturasPersonajes`, intentar cargar una imagen específica
+
         if (texturaParaDibujar == nullptr) {
             std::string carpeta = getCarpetaPersonaje(nombre);
             if (!carpeta.empty()) {
-                // Primero intentar carpeta específica de la cámara (dulcería)
+
                 if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
                     std::vector<std::string> posibles = {
                         "assets/textures/camaras/dulceria/" + carpeta + ".png",
@@ -644,7 +644,7 @@ public:
                     }
                 }
 
-                // Si no se encontró en la carpeta de cámara, intentar en la carpeta de personaje
+
                 if (texturaParaDibujar == nullptr) {
                     std::vector<std::string> rutas = {
                         "assets/textures/personajes/" + carpeta,
@@ -675,7 +675,7 @@ public:
         }
     }
 
-    // Muestra la estática y la información en la terminal de Windows
+
     void dibujarRutaPersonaje(sf::RenderWindow& ventana,
                               const sf::Font& fuente,
                               const std::string& nombre,
@@ -683,7 +683,7 @@ public:
                               TipoCamara posicionActual,
                               bool enPuerta,
                               int fila) const {
-        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return; // No mostrar rutas en dulcería
+        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return;
         if (!rutaIncluyeCamara(ruta, camaraActual) && posicionActual != camaraActual) {
             return;
         }
@@ -750,10 +750,10 @@ public:
         std::cout << "║  >>> TRANSMISION ACTIVA: " << getNombreCamaraActual() << "\n";
         std::cout << "║                                                                ║\n";
         std::cout << "╠════════════════════════════════════════════════════════════════╣\n";
-        
-        // Genera estática
+
+
         generarEstatica();
-        
+
         std::cout << "╠════════════════════════════════════════════════════════════════╣\n";
         std::cout << "║ CANALES DISPONIBLES:                                           ║\n";
         std::cout << "║ [1] DULCERIA    [2] PASILLO A   [3] PASILLO B                  ║\n";
