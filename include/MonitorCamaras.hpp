@@ -214,8 +214,9 @@ private:
                 posicion = {250.f, suelo};
                 maximo = {280.f, 590.f};
             } else if (clave == "Director") {
-                posicion = {535.f, suelo};
-                maximo = {330.f, 640.f};
+                // Colocar detrás del panel del mapa de cámaras (zona superior derecha)
+                posicion = {920.f, 460.f};
+                maximo = {300.f, 420.f};
             } else if (clave == "Popy") {
                 posicion = {785.f, suelo};
                 maximo = {310.f, 610.f};
@@ -518,7 +519,10 @@ public:
                     spriteDir.setScale({escalaDir, escalaDir});
                     spriteDir.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.f,
                                          static_cast<float>(bbox.position.y + bbox.size.y)});
-                    spriteDir.setPosition(posicion);
+
+                    // Colocar los pies del Director al ras del suelo del monitor (sin movimiento)
+                    // Como el origen está en la base del sprite, poner la posición Y en el fondo
+                    spriteDir.setPosition(sf::Vector2f(posicion.x, pantalla.y));
                     ventana.draw(spriteDir);
 
                     // Volver a dibujar la región de las palomitas encima para que el Director quede atrás
@@ -526,9 +530,9 @@ public:
                     const sf::Texture& texFondo = texturasFondo.at(camaraActual);
                     unsigned int w = texFondo.getSize().x;
                     unsigned int h = texFondo.getSize().y;
-                    // Rectángulo aproximado en coordenadas de textura que cubre la máquina de popcorn
-                    sf::IntRect rectPop(sf::Vector2i(static_cast<int>(w * 0.05f), static_cast<int>(h * 0.42f)),
-                                        sf::Vector2i(static_cast<int>(w * 0.25f), static_cast<int>(h * 0.34f)));
+                    // Rectángulo aproximado en coordenadas de textura que cubre la máquina de popcorn (ampliado)
+                    sf::IntRect rectPop(sf::Vector2i(static_cast<int>(w * 0.00f), static_cast<int>(h * 0.45f)),
+                                        sf::Vector2i(static_cast<int>(w * 0.35f), static_cast<int>(h * 0.40f)));
 
                     // Crear sprite que use sólo esa sub-región y posicionarlo escalado
                     sf::Sprite overlay(texFondo);
