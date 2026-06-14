@@ -164,7 +164,8 @@ private:
 
     void dibujarMiniaturaPersonaje(sf::RenderWindow& ventana, const std::string& nombre, sf::Vector2f centro) const {
         if (!personajePermitido(nombre)) return;
-        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return; // No mostrar miniaturas en dulcería
+        // En Dulcería no se muestran miniaturas: sólo el fondo debe verse
+        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return;
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
         const sf::Texture* texturaParaDibujar = nullptr;
@@ -303,8 +304,32 @@ private:
         
         for (const auto& camara : camaras) {
             sf::Texture textura;
-            
-            if (cargarPrimeraImagenEnCarpeta(textura, camara.second)) {
+            // Primero, intentar cargar un archivo con nombre específico dentro de la carpeta
+            bool cargada = false;
+            std::vector<std::string> candidatos;
+            for (const auto& carpeta : camara.second) {
+                std::filesystem::path p(carpeta);
+                std::string base = p.filename().string();
+                if (!base.empty()) {
+                    candidatos.push_back(carpeta + "/" + base + ".png");
+                    candidatos.push_back(std::string("../") + carpeta + "/" + base + ".png");
+                }
+            }
+
+            if (!candidatos.empty()) {
+                if (cargarPrimeraImagenEnCarpeta(textura, candidatos)) {
+                    cargada = true;
+                }
+            }
+
+            // Si no se encontró un archivo con nombre específico, buscar el primer png en la carpeta
+            if (!cargada) {
+                if (cargarPrimeraImagenEnCarpeta(textura, camara.second)) {
+                    cargada = true;
+                }
+            }
+
+            if (cargada) {
                 texturasFondo[camara.first] = textura;
                 std::cerr << "✓ Cargado fondo de cámara" << std::endl;
             } else {
@@ -498,7 +523,8 @@ public:
     // Dibuja un personaje específico en el monitor en la posición central
     void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre) {
         if (!personajePermitido(nombre)) return;
-        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return; // No mostrar personajes en dulcería
+        // En Dulcería no se deben dibujar personajes (solo el fondo)
+        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return;
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
         const sf::Texture* texturaParaDibujar = nullptr;
@@ -515,6 +541,40 @@ public:
 
                 if (cargarPrimeraImagenEnCarpeta(texturaTemporal, rutas)) {
                     texturaParaDibujar = &texturaTemporal;
+                }
+            }
+        }
+
+        // Si no existe textura en `texturasPersonajes`, intentar cargar una imagen específica
+        if (texturaParaDibujar == nullptr) {
+            std::string carpeta = getCarpetaPersonaje(nombre);
+            if (!carpeta.empty()) {
+                // Primero intentar carpeta específica de la cámara (dulcería)
+                if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
+                    std::vector<std::string> posibles = {
+                        "assets/textures/camaras/dulceria/" + carpeta + ".png",
+                        "assets/textures/camaras/dulceria/" + nombre + ".png",
+                        "../assets/textures/camaras/dulceria/" + carpeta + ".png",
+                        "../assets/textures/camaras/dulceria/" + nombre + ".png"
+                    };
+                    for (const auto& p : posibles) {
+                        if (texturaTemporal.loadFromFile(p)) {
+                            texturaParaDibujar = &texturaTemporal;
+                            break;
+                        }
+                    }
+                }
+
+                // Si no se encontró en la carpeta de cámara, intentar en la carpeta de personaje
+                if (texturaParaDibujar == nullptr) {
+                    std::vector<std::string> rutas = {
+                        "assets/textures/personajes/" + carpeta,
+                        "../assets/textures/personajes/" + carpeta
+                    };
+
+                    if (cargarPrimeraImagenEnCarpeta(texturaTemporal, rutas)) {
+                        texturaParaDibujar = &texturaTemporal;
+                    }
                 }
             }
         }
