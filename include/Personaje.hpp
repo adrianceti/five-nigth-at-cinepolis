@@ -31,7 +31,7 @@ public:
 
     virtual ~Personaje() = default;
 
-    virtual EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool luzEncendida = true) {
+    virtual EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool monitorAbierto, bool luzEncendida = true) {
         (void)luzEncendida;
         if (estaAdentro) {
             return EventoPuerta::Ninguno;
@@ -43,20 +43,20 @@ public:
                 return EventoPuerta::Golpe;
             }
 
-            tiempoEnPuerta += dt;
-            if (tiempoEnPuerta >= tiempoPermanenciaPuerta()) {
+            if (monitorAbierto) {
                 estaAdentro = true;
                 estaEnLaPuerta = false;
                 return EventoPuerta::Entrada;
             }
+
+            tiempoEnPuerta += dt;
         }
 
         return EventoPuerta::Ninguno;
     }
 
     virtual bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) {
-        (void)camaraObservada;
-        if (estaAdentro || estaEnLaPuerta) {
+        if (estaAdentro || estaEnLaPuerta || camaraObservada) {
             return false;
         }
 
@@ -93,7 +93,8 @@ class Gobo : public Personaje {
 public:
     Gobo(int dif) : Personaje("Gobo", dif) {}
 
-    EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool luzEncendida = true) override {
+    EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool monitorAbierto, bool luzEncendida = true) override {
+        (void)luzEncendida;
         if (estaAdentro) {
             return EventoPuerta::Ninguno;
         }
@@ -104,26 +105,20 @@ public:
                 return EventoPuerta::Golpe;
             }
 
-            if (!luzEncendida) {
+            if (monitorAbierto) {
                 estaAdentro = true;
                 estaEnLaPuerta = false;
                 return EventoPuerta::Entrada;
             }
 
             tiempoEnPuerta += dt;
-            if (tiempoEnPuerta >= tiempoPermanenciaPuerta()) {
-                estaAdentro = true;
-                estaEnLaPuerta = false;
-                return EventoPuerta::Entrada;
-            }
         }
 
         return EventoPuerta::Ninguno;
     }
 
     bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
-        (void)camaraObservada;
-        if (estaAdentro || estaEnLaPuerta) {
+        if (estaAdentro || estaEnLaPuerta || camaraObservada) {
             return false;
         }
 

@@ -474,14 +474,17 @@ private:
             return;
         }
 
-        bool camaraPopyObservada = jugador.esMonitorAbierto() &&
-                                   monitor.getCamaraActual() == TipoCamara::CAM_05_BANOS;
+        bool monitorAbierto = jugador.esMonitorAbierto();
+        TipoCamara camaraActualMonitor = monitor.getCamaraActual();
+        auto camaraObservada = [&](const Personaje& personaje) {
+            return monitorAbierto && camaraActualMonitor == personaje.getPosicionActual();
+        };
 
-        bool movioGobo = gobo.procesarTickMovimiento(calcularDificultadBasePorPersonaje(gobo));
-        bool movioDirector = director.procesarTickMovimiento(calcularDificultadBasePorPersonaje(director));
-        bool movioPopy = popy.procesarTickMovimiento(calcularDificultadBasePorPersonaje(popy), camaraPopyObservada);
-        bool movioUsher = usher.procesarTickMovimiento(calcularDificultadBasePorPersonaje(usher));
-        bool movioStub = stub.procesarTickMovimiento(calcularDificultadBasePorPersonaje(stub));
+        bool movioGobo = gobo.procesarTickMovimiento(calcularDificultadBasePorPersonaje(gobo), camaraObservada(gobo));
+        bool movioDirector = director.procesarTickMovimiento(calcularDificultadBasePorPersonaje(director), camaraObservada(director));
+        bool movioPopy = popy.procesarTickMovimiento(calcularDificultadBasePorPersonaje(popy), camaraObservada(popy));
+        bool movioUsher = usher.procesarTickMovimiento(calcularDificultadBasePorPersonaje(usher), camaraObservada(usher));
+        bool movioStub = stub.procesarTickMovimiento(calcularDificultadBasePorPersonaje(stub), camaraObservada(stub));
 
         if (movioGobo) {
             if (gobo.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 60.0f);
@@ -987,11 +990,11 @@ private:
         jugador.bajarEnergia(dt);
         actualizarInterferenciaMonitor();
 
-        EventoPuerta eventoGobo = gobo.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
-        EventoPuerta eventoDirector = director.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esLuzDerechaEncendida());
-        EventoPuerta eventoPopy = popy.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esLuzDerechaEncendida());
-        EventoPuerta eventoUsher = usher.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
-        EventoPuerta eventoStub = stub.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoGobo = gobo.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoDirector = director.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzDerechaEncendida());
+        EventoPuerta eventoPopy = popy.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzDerechaEncendida());
+        EventoPuerta eventoUsher = usher.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoStub = stub.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
 
         if (eventoGobo == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 68.0f);
         if (eventoDirector == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 68.0f);
