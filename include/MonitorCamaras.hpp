@@ -463,6 +463,82 @@ public:
             float escalaY = pantalla.y / texturasFondo.at(camaraActual).getSize().y;
             fondoSprite.setScale({escalaX, escalaY});
             ventana.draw(fondoSprite);
+
+            // Si estamos en Dulcería, dibujar al Director detrás de las palomitas
+            if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
+                // Intentar obtener textura del Director
+                const sf::Texture* texDirector = nullptr;
+                auto it = texturasPersonajes.find(getClaveTexturaPersonaje("Director"));
+                sf::Texture texTemp;
+                if (it != texturasPersonajes.end()) {
+                    texDirector = &it->second;
+                } else {
+                    // Priorizar la imagen exacta proporcionada por el usuario
+                    std::vector<std::string> preferidas = {
+                        "assets/textures/personajes/director/7fe9fc08-2881-4e84-92a4-0efea3ba737a_removalai_preview.png",
+                        "../assets/textures/personajes/director/7fe9fc08-2881-4e84-92a4-0efea3ba737a_removalai_preview.png"
+                    };
+                    for (const auto& p : preferidas) {
+                        if (texTemp.loadFromFile(p)) { texDirector = &texTemp; break; }
+                    }
+
+                    // Si no existe la preferida, buscar en carpeta de cámara primero
+                    if (texDirector == nullptr) {
+                        std::vector<std::string> posibles = {
+                            "assets/textures/camaras/dulceria/director.png",
+                            "assets/textures/camaras/dulceria/Director.png",
+                            "../assets/textures/camaras/dulceria/director.png",
+                            "../assets/textures/camaras/dulceria/Director.png"
+                        };
+                        for (const auto& p : posibles) {
+                            if (texTemp.loadFromFile(p)) { texDirector = &texTemp; break; }
+                        }
+                    }
+                    // Si aún no se encontró, intentar en carpeta de personaje
+                    if (texDirector == nullptr) {
+                        std::vector<std::string> rutas = {
+                            "assets/textures/personajes/director",
+                            "../assets/textures/personajes/director"
+                        };
+                        cargarPrimeraImagenEnCarpeta(texTemp, rutas);
+                        if (texTemp.getSize().x > 0) texDirector = &texTemp;
+                    }
+                }
+
+                if (texDirector != nullptr) {
+                    // Calcular bounding box y escala según el plano para Dulcería
+                    sf::IntRect bbox = obtenerBoundingBoxAlpha(*texDirector);
+                    sf::Vector2f posicion, maximo;
+                    obtenerPlanoPersonaje("Director", posicion, maximo);
+                    float escalaXdir = maximo.x / static_cast<float>(bbox.size.x);
+                    float escalaYdir = maximo.y / static_cast<float>(bbox.size.y);
+                    float escalaDir = std::min(escalaXdir, escalaYdir);
+
+                    sf::Sprite spriteDir(*texDirector);
+                    spriteDir.setScale({escalaDir, escalaDir});
+                    spriteDir.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.f,
+                                         static_cast<float>(bbox.position.y + bbox.size.y)});
+                    spriteDir.setPosition(posicion);
+                    ventana.draw(spriteDir);
+
+                    // Volver a dibujar la región de las palomitas encima para que el Director quede atrás
+                    // Definimos una región relativa (ajustable) que cubre la caja de palomitas en la imagen
+                    const sf::Texture& texFondo = texturasFondo.at(camaraActual);
+                    unsigned int w = texFondo.getSize().x;
+                    unsigned int h = texFondo.getSize().y;
+                    // Rectángulo aproximado en coordenadas de textura que cubre la máquina de popcorn
+                    sf::IntRect rectPop(sf::Vector2i(static_cast<int>(w * 0.05f), static_cast<int>(h * 0.42f)),
+                                        sf::Vector2i(static_cast<int>(w * 0.25f), static_cast<int>(h * 0.34f)));
+
+                    // Crear sprite que use sólo esa sub-región y posicionarlo escalado
+                    sf::Sprite overlay(texFondo);
+                    overlay.setTextureRect(rectPop);
+                    overlay.setPosition(sf::Vector2f(static_cast<float>(rectPop.position.x) * escalaX,
+                                                     static_cast<float>(rectPop.position.y) * escalaY));
+                    overlay.setScale({escalaX, escalaY});
+                    ventana.draw(overlay);
+                }
+            }
         } else {
             // Si no existe textura, usar color de fallback
             sf::Color colorFondo = colorFondoFallback.count(camaraActual) > 0 
