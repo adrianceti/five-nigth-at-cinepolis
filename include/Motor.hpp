@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <string>
 #include <cstdint>
+#include <cmath>
 #include "Guardia.hpp"
 #include "MonitorCamaras.hpp"
 #include "Personaje.hpp"
@@ -213,6 +214,34 @@ private:
             esIzquierda ? zona.position.x + zona.size.x - 34.0f : zona.position.x + margenX,
             centroY - 19.0f
         };
+    }
+
+    float obtenerPulsoLuzPasillo(bool esIzquierda) const {
+        float tiempo = relojEstado.getElapsedTime().asSeconds();
+        float fase = esIzquierda ? 0.0f : 1.35f;
+        return 0.5f + 0.5f * std::sin((tiempo + fase) * 5.0f);
+    }
+
+    void dibujarResplandorLuzPuerta(sf::RenderWindow& ventana, const sf::FloatRect& zona, bool esIzquierda, bool cerrada) const {
+        float pulso = obtenerPulsoLuzPasillo(esIzquierda);
+        std::uint8_t alphaBorde = static_cast<std::uint8_t>((cerrada ? 70.0f : 110.0f) + pulso * 70.0f);
+
+        sf::RectangleShape halo({zona.size.x, zona.size.y});
+        halo.setPosition(zona.position);
+        halo.setFillColor(sf::Color(255, 210, 105, cerrada ? 8 : 14));
+        halo.setOutlineColor(sf::Color(255, 225, 140, static_cast<std::uint8_t>(alphaBorde * 0.68f)));
+        halo.setOutlineThickness(4.0f);
+        ventana.draw(halo);
+
+        sf::RectangleShape bordeInterno({
+            std::max(4.0f, zona.size.x - 16.0f),
+            std::max(4.0f, zona.size.y - 16.0f)
+        });
+        bordeInterno.setPosition({zona.position.x + 8.0f, zona.position.y + 8.0f});
+        bordeInterno.setFillColor(sf::Color::Transparent);
+        bordeInterno.setOutlineColor(sf::Color(255, 238, 180, static_cast<std::uint8_t>(38.0f + pulso * 48.0f)));
+        bordeInterno.setOutlineThickness(2.0f);
+        ventana.draw(bordeInterno);
     }
 
     void generarTexturaInterferenciaMonitor() {
@@ -1291,12 +1320,19 @@ private:
                 ventana.draw(spriteOficina.value());
             }
 
-            dibujarPuertaOficina(ventana, true, jugador.esPuertaIzquierdaCerrada());
-            dibujarPuertaOficina(ventana, false, jugador.esPuertaDerechaCerrada());
+            dibujarPuertaOficina(
+                ventana,
+                true,
+                jugador.esPuertaIzquierdaCerrada(),
+                jugador.esLuzIzquierdaEncendida());
+            dibujarPuertaOficina(
+                ventana,
+                false,
+                jugador.esPuertaDerechaCerrada(),
+                jugador.esLuzDerechaEncendida());
 
 
             if (jugador.esLuzIzquierdaEncendida()) {
-                ventana.draw(marcoLuzIzquierda);
                 if (!jugador.esPuertaIzquierdaCerrada()) {
                     if (gobo.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, gobo.getNombre(), true);
                     if (usher.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, usher.getNombre(), true);
@@ -1305,7 +1341,6 @@ private:
             }
 
             if (jugador.esLuzDerechaEncendida()) {
-                ventana.draw(marcoLuzDerecha);
                 if (!jugador.esPuertaDerechaCerrada()) {
                     if (director.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, director.getNombre(), false);
                     if (popy.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, popy.getNombre(), false);
@@ -1367,7 +1402,7 @@ private:
         ventana.display();
     }
 
-    void dibujarPuertaOficina(sf::RenderWindow& ventana, bool esIzquierda, bool cerrada) {
+    void dibujarPuertaOficina(sf::RenderWindow& ventana, bool esIzquierda, bool cerrada, bool luzEncendida) {
         sf::FloatRect zona = esIzquierda
             ? visualPuertaIzquierda.getGlobalBounds()
             : visualPuertaDerecha.getGlobalBounds();
@@ -1384,7 +1419,7 @@ private:
             hueco.setOutlineThickness(0.0f);
             ventana.draw(hueco);
 
-            dibujarFondoPasilloPuerta(ventana, zona, esIzquierda);
+            dibujarFondoPasilloPuerta(ventana, zona, esIzquierda, luzEncendida);
         }
 
         sf::IntRect recorte = obtenerRecortePuertaOficina(esIzquierda);
@@ -1412,6 +1447,8 @@ private:
         marcoExterior.setOutlineThickness(5.0f);
         ventana.draw(marcoExterior);
 
+        if (luzEncendida) dibujarResplandorLuzPuerta(ventana, zona, esIzquierda, cerrada);
+
         sf::RectangleShape boton({24.0f, 38.0f});
         boton.setPosition(obtenerPosicionIndicadorPuerta(zona, esIzquierda));
         boton.setFillColor(sf::Color(9, 10, 12, 238));
@@ -1428,7 +1465,7 @@ private:
         ventana.draw(luzBoton);
     }
 
-    void dibujarFondoPasilloPuerta(sf::RenderWindow& ventana, const sf::FloatRect& zona, bool esIzquierda) {
+    void dibujarFondoPasilloPuerta(sf::RenderWindow& ventana, const sf::FloatRect& zona, bool esIzquierda, bool luzEncendida) {
         const sf::Texture* texturaPasillo = nullptr;
         if (esIzquierda && pasilloIzquierdoCargado) {
             texturaPasillo = &texturaPasilloIzquierda;
@@ -1465,13 +1502,53 @@ private:
             zona.size.y / static_cast<float>(recorte.size.y)
         });
         fondo.setPosition(zona.position);
-        fondo.setColor(sf::Color(145, 150, 158, 225));
+        float pulso = luzEncendida ? obtenerPulsoLuzPasillo(esIzquierda) : 0.0f;
+        fondo.setColor(luzEncendida
+            ? sf::Color(255, 255, 248, 255)
+            : sf::Color(170, 174, 182, 255));
         ventana.draw(fondo);
 
         sf::RectangleShape oscuridad({zona.size.x, zona.size.y});
         oscuridad.setPosition(zona.position);
-        oscuridad.setFillColor(sf::Color(0, 0, 0, 72));
+        oscuridad.setFillColor(luzEncendida
+            ? sf::Color(0, 0, 0, 0)
+            : sf::Color(0, 0, 0, 54));
         ventana.draw(oscuridad);
+
+        if (luzEncendida) {
+            sf::RectangleShape haz({zona.size.x, zona.size.y});
+            haz.setPosition(zona.position);
+            haz.setFillColor(sf::Color(255, 224, 142, static_cast<std::uint8_t>(14.0f + pulso * 14.0f)));
+            ventana.draw(haz);
+
+            sf::RectangleShape nucleo({
+                std::max(10.0f, zona.size.x * 0.34f),
+                zona.size.y
+            });
+            nucleo.setPosition({
+                esIzquierda ? zona.position.x + zona.size.x * 0.54f : zona.position.x + zona.size.x * 0.08f,
+                zona.position.y
+            });
+            nucleo.setFillColor(sf::Color(255, 245, 195, static_cast<std::uint8_t>(24.0f + pulso * 24.0f)));
+            ventana.draw(nucleo);
+
+            for (int i = 0; i < 3; ++i) {
+                float t = static_cast<float>(i);
+                float ancho = zona.size.x * (0.06f + t * 0.025f);
+                float x = esIzquierda
+                    ? zona.position.x + zona.size.x - ancho - t * 16.0f
+                    : zona.position.x + t * 16.0f;
+
+                sf::RectangleShape banda({ancho, zona.size.y});
+                banda.setPosition({x, zona.position.y});
+                banda.setFillColor(sf::Color(
+                    255,
+                    static_cast<std::uint8_t>(224 + i * 7),
+                    static_cast<std::uint8_t>(155 + i * 12),
+                    static_cast<std::uint8_t>(8.0f + pulso * 10.0f)));
+                ventana.draw(banda);
+            }
+        }
     }
 
     void renderizarPersonajeEnPuerta(sf::RenderWindow& ventana, const std::string& nombre, bool esIzquierda) {
