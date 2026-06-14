@@ -170,6 +170,24 @@ private:
         }
     }
 
+    sf::IntRect obtenerRecortePuertaOficina(bool esIzquierda) const {
+        return esIzquierda
+            ? sf::IntRect(sf::Vector2i(0, 184), sf::Vector2i(222, 430))
+            : sf::IntRect(sf::Vector2i(1360, 116), sf::Vector2i(187, 462));
+    }
+
+    sf::Vector2f obtenerEscalaOficina() const {
+        sf::Vector2u tamanoTextura = texturaOficina.getSize();
+        if (tamanoTextura.x == 0 || tamanoTextura.y == 0) {
+            return {1.0f, 1.0f};
+        }
+
+        return {
+            anchoVirtualOficina / static_cast<float>(tamanoTextura.x),
+            720.0f / static_cast<float>(tamanoTextura.y)
+        };
+    }
+
     void generarTexturaInterferenciaMonitor() {
         if (cargarTextureDesdeRutas(texturaInterferenciaMonitor, {
                 "assets/textures/monitor/estatica.png",
@@ -1343,30 +1361,18 @@ private:
 
         dibujarFondoPasilloPuerta(ventana, zona, esIzquierda);
 
-        sf::IntRect recorte = esIzquierda
-            ? sf::IntRect(sf::Vector2i(0, 184), sf::Vector2i(222, 430))
-            : sf::IntRect(sf::Vector2i(1360, 116), sf::Vector2i(187, 462));
+        sf::IntRect recorte = obtenerRecortePuertaOficina(esIzquierda);
 
         sf::Sprite puerta(texturaOficina);
         puerta.setTextureRect(recorte);
+        sf::Vector2f escalaOficina = obtenerEscalaOficina();
+        float anchoPuerta = static_cast<float>(recorte.size.x) * escalaOficina.x;
 
-        float altoObjetivo = h - 60.0f;
-        float anchoObjetivo = altoObjetivo * static_cast<float>(recorte.size.x) /
-                              static_cast<float>(recorte.size.y);
-        if (anchoObjetivo > w - 32.0f) {
-            anchoObjetivo = w - 32.0f;
-            altoObjetivo = anchoObjetivo * static_cast<float>(recorte.size.y) /
-                           static_cast<float>(recorte.size.x);
-        }
+        puerta.setScale(escalaOficina);
 
-        puerta.setScale({
-            anchoObjetivo / static_cast<float>(recorte.size.x),
-            altoObjetivo / static_cast<float>(recorte.size.y)
-        });
-
-        float puertaX = x + (w - anchoObjetivo) / 2.0f;
-        float puertaY = y + (h - altoObjetivo) / 2.0f;
-        float desplazamientoAbierta = anchoObjetivo * 0.82f;
+        float puertaX = static_cast<float>(recorte.position.x) * escalaOficina.x;
+        float puertaY = static_cast<float>(recorte.position.y) * escalaOficina.y;
+        float desplazamientoAbierta = anchoPuerta * 0.82f;
         if (!cerrada) {
             puertaX += esIzquierda ? -desplazamientoAbierta : desplazamientoAbierta;
         }
