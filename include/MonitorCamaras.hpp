@@ -157,7 +157,14 @@ private:
         return "";
     }
 
+    bool personajePermitido(const std::string& nombre) const {
+        static const std::vector<std::string> permitidos = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
+        return std::find(permitidos.begin(), permitidos.end(), nombre) != permitidos.end();
+    }
+
     void dibujarMiniaturaPersonaje(sf::RenderWindow& ventana, const std::string& nombre, sf::Vector2f centro) const {
+        if (!personajePermitido(nombre)) return;
+        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return; // No mostrar miniaturas en dulcería
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
         const sf::Texture* texturaParaDibujar = nullptr;
@@ -490,6 +497,8 @@ private:
 public:
     // Dibuja un personaje específico en el monitor en la posición central
     void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre) {
+        if (!personajePermitido(nombre)) return;
+        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return; // No mostrar personajes en dulcería
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
         const sf::Texture* texturaParaDibujar = nullptr;
@@ -535,6 +544,7 @@ public:
                               TipoCamara posicionActual,
                               bool enPuerta,
                               int fila) const {
+        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return; // No mostrar rutas en dulcería
         if (!rutaIncluyeCamara(ruta, camaraActual) && posicionActual != camaraActual) {
             return;
         }

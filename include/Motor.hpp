@@ -1227,6 +1227,9 @@ private:
     }
 
     void renderizarPersonajeEnPuerta(sf::RenderWindow& ventana, const std::string& nombre, bool esIzquierda) {
+        static const std::vector<std::string> permitidos = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
+        if (std::find(permitidos.begin(), permitidos.end(), nombre) == permitidos.end()) return;
+
         if (spritesPersonajesPuerta.find(nombre) != spritesPersonajesPuerta.end()) {
             sf::Sprite sprite = spritesPersonajesPuerta.at(nombre);
             
