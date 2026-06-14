@@ -40,6 +40,11 @@ public:
             return EventoPuerta::Ninguno;
         }
 
+        if (puertaCerrada) {
+            resetear();
+            return EventoPuerta::Golpe;
+        }
+
         if (luzEncendida) {
             tiempoBajoLuz += dt;
             if (tiempoBajoLuz >= 0.8f) {
@@ -238,13 +243,13 @@ public:
             return EventoPuerta::Ninguno;
         }
 
+        if (puertaCerrada) {
+            resetear();
+            return EventoPuerta::Golpe;
+        }
+
         tiempoEnPuerta += dt;
         if (tiempoEnPuerta >= 3.0f) {
-            if (puertaCerrada) {
-                resetear();
-                return EventoPuerta::Golpe;
-            }
-
             if (monitorAbierto) {
                 estaAdentro = true;
                 estaEnLaPuerta = false;
@@ -276,6 +281,11 @@ public:
         (void)luzEncendida;
         if (estaAdentro || !estaEnLaPuerta) {
             return EventoPuerta::Ninguno;
+        }
+
+        if (puertaCerrada) {
+            resetear();
+            return EventoPuerta::Golpe;
         }
 
         if (monitorAbierto && !puertaCerrada) {

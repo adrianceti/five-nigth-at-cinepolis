@@ -453,16 +453,16 @@ private:
         int bonoHorario = obtenerCurvaDificultadHoraria().bonoDado;
 
         if (personaje.getNombre() == "Gobo") {
-            return std::clamp(12 + bonoHorario + 2, 1, 20);
+            return std::clamp(4 + bonoHorario, 1, 20);
         }
         if (personaje.getNombre() == "Director") {
-            return std::clamp(14 + bonoHorario + 1, 1, 20);
+            return std::clamp(3 + bonoHorario, 1, 20);
         }
         if (personaje.getNombre() == "Popy") {
-            return std::clamp(10 + bonoHorario, 1, 20);
+            return std::clamp(2 + bonoHorario, 1, 20);
         }
         if (personaje.getNombre() == "The Usher") {
-            return std::clamp(16 + bonoHorario - 1, 1, 20);
+            return std::clamp(2 + bonoHorario, 1, 20);
         }
         if (personaje.getNombre() == "Tickety Stub") {
             return std::clamp(8 + bonoHorario + 3, 1, 20);
@@ -991,21 +991,16 @@ private:
 
         if (eventoGobo == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 68.0f);
         if (eventoDirector == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 68.0f);
-        if (eventoPopy == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 70.0f);
+        if (eventoPopy == EventoPuerta::Golpe) {
+            jugador.descontarEnergiaPorcentaje(6.0f);
+            reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 70.0f);
+        }
         if (eventoUsher == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 66.0f);
 
         if (eventoGobo == EventoPuerta::Entrada) { iniciarAtaque(gobo.getNombre()); return; }
         if (eventoDirector == EventoPuerta::Entrada) { iniciarAtaque(director.getNombre()); return; }
         if (eventoPopy == EventoPuerta::Entrada) { iniciarAtaque(popy.getNombre()); return; }
         if (eventoUsher == EventoPuerta::Entrada) { iniciarAtaque(usher.getNombre()); return; }
-        if (jugador.esMonitorAbierto() &&
-            !jugador.esPuertaDerechaCerrada() &&
-            usher.getPosicionActual() == TipoCamara::CAM_03_PASILLO_B &&
-            !usher.esEnLaPuerta()) {
-            iniciarJumpscare();
-            return;
-        }
-
         if (jugador.esLuzIzquierdaEncendida() && gobo.esEnLaPuerta()) {
             tiempoLuzIzquierdaActiva += dt;
             if (tiempoLuzIzquierdaActiva >= 0.8f) {
