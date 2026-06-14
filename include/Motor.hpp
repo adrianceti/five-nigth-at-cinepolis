@@ -188,6 +188,33 @@ private:
         };
     }
 
+    void ajustarZonaPuertaFisica(sf::RectangleShape& zonaPuerta, bool esIzquierda) {
+        sf::IntRect recorte = obtenerRecortePuertaOficina(esIzquierda);
+        sf::Vector2f escalaOficina = obtenerEscalaOficina();
+
+        zonaPuerta.setSize({
+            static_cast<float>(recorte.size.x) * escalaOficina.x,
+            static_cast<float>(recorte.size.y) * escalaOficina.y
+        });
+        zonaPuerta.setFillColor(sf::Color::Transparent);
+        zonaPuerta.setOutlineColor(sf::Color(8, 9, 10, 235));
+        zonaPuerta.setOutlineThickness(3.0f);
+        zonaPuerta.setPosition({
+            static_cast<float>(recorte.position.x) * escalaOficina.x,
+            static_cast<float>(recorte.position.y) * escalaOficina.y
+        });
+    }
+
+    sf::Vector2f obtenerPosicionIndicadorPuerta(const sf::FloatRect& zona, bool esIzquierda) const {
+        const float margenX = 10.0f;
+        const float centroY = zona.position.y + zona.size.y * 0.56f;
+
+        return {
+            esIzquierda ? zona.position.x + zona.size.x - 34.0f : zona.position.x + margenX,
+            centroY - 19.0f
+        };
+    }
+
     void generarTexturaInterferenciaMonitor() {
         if (cargarTextureDesdeRutas(texturaInterferenciaMonitor, {
                 "assets/textures/monitor/estatica.png",
@@ -734,17 +761,14 @@ private:
             ? visualPuertaIzquierda.getGlobalBounds()
             : visualPuertaDerecha.getGlobalBounds();
 
-        sf::Vector2f posicionBoton(
-            esIzquierda ? zona.position.x + zona.size.x - 56.0f : zona.position.x + 24.0f,
-            zona.position.y + 318.0f
-        );
+        sf::Vector2f posicionBoton = obtenerPosicionIndicadorPuerta(zona, esIzquierda);
 
         sf::Vector2i esquinaSuperior = ventana.mapCoordsToPixel(
-            posicionBoton - sf::Vector2f(18.0f, 18.0f),
+            posicionBoton - sf::Vector2f(10.0f, 10.0f),
             vistaOficina
         );
         sf::Vector2i esquinaInferior = ventana.mapCoordsToPixel(
-            posicionBoton + sf::Vector2f(50.0f, 74.0f),
+            posicionBoton + sf::Vector2f(34.0f, 48.0f),
             vistaOficina
         );
 
@@ -1353,13 +1377,15 @@ private:
         float w = zona.size.x;
         float h = zona.size.y;
 
-        sf::RectangleShape hueco({w, h});
-        hueco.setPosition({x, y});
-        hueco.setFillColor(sf::Color(10, 12, 16, 235));
-        hueco.setOutlineThickness(0.0f);
-        ventana.draw(hueco);
+        if (!cerrada) {
+            sf::RectangleShape hueco({w, h});
+            hueco.setPosition({x, y});
+            hueco.setFillColor(sf::Color(10, 12, 16, 235));
+            hueco.setOutlineThickness(0.0f);
+            ventana.draw(hueco);
 
-        dibujarFondoPasilloPuerta(ventana, zona, esIzquierda);
+            dibujarFondoPasilloPuerta(ventana, zona, esIzquierda);
+        }
 
         sf::IntRect recorte = obtenerRecortePuertaOficina(esIzquierda);
 
@@ -1379,27 +1405,24 @@ private:
         puerta.setPosition({puertaX, puertaY});
         ventana.draw(puerta);
 
-        sf::RectangleShape marcoExterior({w - 14.0f, h});
-        marcoExterior.setPosition({x + 7.0f, y});
+        sf::RectangleShape marcoExterior({w, h});
+        marcoExterior.setPosition({x, y});
         marcoExterior.setFillColor(sf::Color::Transparent);
-        marcoExterior.setOutlineColor(sf::Color(48, 52, 58, 210));
-        marcoExterior.setOutlineThickness(6.0f);
+        marcoExterior.setOutlineColor(sf::Color(5, 6, 7, 245));
+        marcoExterior.setOutlineThickness(5.0f);
         ventana.draw(marcoExterior);
 
-        sf::RectangleShape boton({32.0f, 56.0f});
-        boton.setPosition({
-            esIzquierda ? x + w - 56.0f : x + 24.0f,
-            y + 318.0f
-        });
-        boton.setFillColor(sf::Color(16, 18, 20, 238));
-        boton.setOutlineColor(sf::Color(115, 118, 122, 230));
+        sf::RectangleShape boton({24.0f, 38.0f});
+        boton.setPosition(obtenerPosicionIndicadorPuerta(zona, esIzquierda));
+        boton.setFillColor(sf::Color(9, 10, 12, 238));
+        boton.setOutlineColor(sf::Color(34, 36, 40, 235));
         boton.setOutlineThickness(2.0f);
         ventana.draw(boton);
 
-        sf::RectangleShape luzBoton({18.0f, 18.0f});
+        sf::RectangleShape luzBoton({12.0f, 12.0f});
         luzBoton.setPosition({
-            boton.getPosition().x + 7.0f,
-            boton.getPosition().y + 8.0f
+            boton.getPosition().x + 6.0f,
+            boton.getPosition().y + 6.0f
         });
         luzBoton.setFillColor(cerrada ? sf::Color(220, 48, 36, 245) : sf::Color(58, 210, 86, 245));
         ventana.draw(luzBoton);
@@ -1654,17 +1677,8 @@ public:
         }
 
 
-        visualPuertaIzquierda.setSize(sf::Vector2f(360.0f, 720.0f));
-        visualPuertaIzquierda.setFillColor(sf::Color::Transparent);
-        visualPuertaIzquierda.setOutlineColor(sf::Color(80, 80, 80));
-        visualPuertaIzquierda.setOutlineThickness(3.0f);
-        visualPuertaIzquierda.setPosition(sf::Vector2f(0.0f, 0.0f));
-
-        visualPuertaDerecha.setSize(sf::Vector2f(360.0f, 720.0f));
-        visualPuertaDerecha.setFillColor(sf::Color::Transparent);
-        visualPuertaDerecha.setOutlineColor(sf::Color(80, 80, 80));
-        visualPuertaDerecha.setOutlineThickness(3.0f);
-        visualPuertaDerecha.setPosition(sf::Vector2f(anchoVirtualOficina - 360.0f, 0.0f));
+        ajustarZonaPuertaFisica(visualPuertaIzquierda, true);
+        ajustarZonaPuertaFisica(visualPuertaDerecha, false);
 
 
         marcoLuzIzquierda.setSize(sf::Vector2f(220.0f, 400.0f));
