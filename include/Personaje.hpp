@@ -1,10 +1,10 @@
 #pragma once
-#include <string>
-#include <cstdlib>
+
 #include <algorithm>
+#include <cstdlib>
+#include <string>
 #include "MonitorCamaras.hpp"
 
-// Clase base para todos los personajes
 class Personaje {
 protected:
     std::string nombre;
@@ -12,61 +12,66 @@ protected:
     int dificultad;
     bool estaEnLaPuerta;
     bool estaAdentro;
-    
-    float tiempoAcumuladoIA;
     float tiempoEnPuerta;
 
 public:
-    Personaje(std::string nom, int dif) 
-        : nombre(nom), posicionActual(TipoCamara::CAM_01_DULCERIA), 
-          dificultad(dif), estaEnLaPuerta(false), estaAdentro(false),
-          tiempoAcumuladoIA(0.0f), tiempoEnPuerta(0.0f) {}
+    Personaje(std::string nom, int dif)
+        : nombre(std::move(nom)),
+          posicionActual(TipoCamara::CAM_01_DULCERIA),
+          dificultad(dif),
+          estaEnLaPuerta(false),
+          estaAdentro(false),
+          tiempoEnPuerta(0.0f) {}
 
     virtual ~Personaje() = default;
 
-    virtual bool actualizarIA(float dt, bool puertaCerrada, bool puedeMoverse = true,
-                              float intervaloIntentos = 9.0f, int bonoDificultad = 0) {
-        if (estaAdentro) return false;
-
-        if (!puedeMoverse) {
-            return false;
+    virtual void actualizarEstadoPuerta(float dt, bool puertaCerrada, bool luzEncendida = true) {
+        (void)luzEncendida;
+        if (estaAdentro) {
+            return;
         }
 
         if (estaEnLaPuerta) {
             if (puertaCerrada) {
                 resetear();
-                return false;
+                return;
             }
+
             tiempoEnPuerta += dt;
-            if (tiempoEnPuerta >= 3.5f) {
+            if (tiempoEnPuerta >= tiempoPermanenciaPuerta()) {
                 estaAdentro = true;
                 estaEnLaPuerta = false;
             }
+        }
+    }
+
+    virtual bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) {
+        (void)camaraObservada;
+        if (estaAdentro || estaEnLaPuerta) {
             return false;
         }
 
-        tiempoAcumuladoIA += dt;
-        if (tiempoAcumuladoIA >= intervaloIntentos) {
-            tiempoAcumuladoIA = 0.0f;
-            int intento = (std::rand() % 20) + 1;
-            int dificultadEfectiva = std::clamp(dificultad + bonoDificultad, 1, 20);
-            if (intento <= dificultadEfectiva) {
-                avanzarEnRuta();
-                return true;
-            }
+        int intento = (std::rand() % 20) + 1;
+        int dificultadClampeada = std::clamp(dificultadEfectiva, 1, 20);
+        if (intento <= dificultadClampeada) {
+            avanzarEnRuta();
+            return true;
         }
 
         return false;
     }
 
-    virtual void avanzarEnRuta() = 0; // Cada personaje tiene su propia ruta
+    virtual void avanzarEnRuta() = 0;
 
     virtual void resetear() {
         posicionActual = TipoCamara::CAM_01_DULCERIA;
         estaEnLaPuerta = false;
         estaAdentro = false;
-        tiempoAcumuladoIA = 0.0f;
         tiempoEnPuerta = 0.0f;
+    }
+
+    virtual float tiempoPermanenciaPuerta() const {
+        return 3.5f;
     }
 
     std::string getNombre() const { return nombre; }
@@ -75,21 +80,62 @@ public:
     bool esEstaAdentro() const { return estaAdentro; }
 };
 
-// --- GOBO: Llega por la Puerta Izquierda ---
 class Gobo : public Personaje {
 public:
     Gobo(int dif) : Personaje("Gobo", dif) {}
 
+    void actualizarEstadoPuerta(float dt, bool puertaCerrada, bool luzEncendida = true) override {
+        if (estaAdentro) {
+            return;
+        }
+
+        if (estaEnLaPuerta) {
+            if (puertaCerrada) {
+                resetear();
+                return;
+            }
+
+            if (!luzEncendida) {
+                estaAdentro = true;
+                estaEnLaPuerta = false;
+                return;
+            }
+
+            tiempoEnPuerta += dt;
+            if (tiempoEnPuerta >= tiempoPermanenciaPuerta()) {
+                estaAdentro = true;
+                estaEnLaPuerta = false;
+            }
+        }
+    }
+
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
+        (void)camaraObservada;
+        if (estaAdentro || estaEnLaPuerta) {
+            return false;
+        }
+
+        int intento = (std::rand() % 20) + 1;
+        int dificultadClampeada = std::clamp(dificultadEfectiva + 2, 1, 20);
+        if (intento <= dificultadClampeada) {
+            avanzarEnRuta();
+            return true;
+        }
+
+        return false;
+    }
+
     void avanzarEnRuta() override {
         switch (posicionActual) {
             case TipoCamara::CAM_01_DULCERIA:
-                posicionActual = TipoCamara::CAM_04_SALAS;
+                posicionActual = (std::rand() % 2 == 0) ? TipoCamara::CAM_04_SALAS : TipoCamara::CAM_02_PASILLO_A;
                 break;
             case TipoCamara::CAM_04_SALAS:
                 posicionActual = TipoCamara::CAM_02_PASILLO_A;
                 break;
             case TipoCamara::CAM_02_PASILLO_A:
                 estaEnLaPuerta = true;
+                tiempoEnPuerta = 0.0f;
                 break;
             default:
                 break;
@@ -97,44 +143,41 @@ public:
     }
 };
 
-// --- DIRECTOR: Llega por la Puerta Izquierda (ruta diferente) ---
 class Director : public Personaje {
 public:
     Director(int dif) : Personaje("Director", dif) {}
 
+    float tiempoPermanenciaPuerta() const override {
+        return 5.0f;
+    }
+
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
+        (void)camaraObservada;
+        if (estaAdentro || estaEnLaPuerta) {
+            return false;
+        }
+
+        int intento = (std::rand() % 20) + 1;
+        int dificultadClampeada = std::clamp(dificultadEfectiva + 1, 1, 20);
+        if (intento <= dificultadClampeada) {
+            avanzarEnRuta();
+            return true;
+        }
+
+        return false;
+    }
+
     void avanzarEnRuta() override {
         switch (posicionActual) {
             case TipoCamara::CAM_01_DULCERIA:
                 posicionActual = TipoCamara::CAM_03_PASILLO_B;
                 break;
             case TipoCamara::CAM_03_PASILLO_B:
-                posicionActual = TipoCamara::CAM_02_PASILLO_A;
-                break;
-            case TipoCamara::CAM_02_PASILLO_A:
-                estaEnLaPuerta = true;
-                break;
-            default:
-                break;
-        }
-    }
-};
-
-// --- POPY: Llega por la Puerta Derecha ---
-class Popy : public Personaje {
-public:
-    Popy(int dif) : Personaje("Popy", dif) {}
-
-    void avanzarEnRuta() override {
-        switch (posicionActual) {
-            case TipoCamara::CAM_01_DULCERIA:
                 posicionActual = TipoCamara::CAM_05_BANOS;
                 break;
             case TipoCamara::CAM_05_BANOS:
-                posicionActual = TipoCamara::CAM_03_PASILLO_B;
-                break;
-            case TipoCamara::CAM_03_PASILLO_B:
-                // NOTA: Esta es la puerta derecha (requeriría agregar esEnLaPuertaDerecha)
-                estaEnLaPuerta = true; // Por ahora usa puerta izquierda
+                estaEnLaPuerta = true;
+                tiempoEnPuerta = 0.0f;
                 break;
             default:
                 break;
@@ -142,7 +185,65 @@ public:
     }
 };
 
-// --- THE USHER: Llega por la Puerta Izquierda (ruta larga) ---
+class Popy : public Personaje {
+private:
+    int faseAgitacion;
+
+public:
+    Popy(int dif) : Personaje("Popy", dif), faseAgitacion(0) {}
+
+    void resetear() override {
+        Personaje::resetear();
+        faseAgitacion = 0;
+    }
+
+    float tiempoPermanenciaPuerta() const override {
+        return 1.9f;
+    }
+
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
+        (void)camaraObservada;
+        if (estaAdentro || estaEnLaPuerta) {
+            return false;
+        }
+
+        if (posicionActual != TipoCamara::CAM_05_BANOS) {
+            int intentoEntrada = (std::rand() % 20) + 1;
+            int dificultadEntrada = std::clamp(dificultadEfectiva, 1, 20);
+            if (intentoEntrada <= dificultadEntrada) {
+                posicionActual = TipoCamara::CAM_05_BANOS;
+                return true;
+            }
+            return false;
+        }
+
+        if (camaraObservada) {
+            faseAgitacion = std::max(0, faseAgitacion - 1);
+            return false;
+        }
+
+        int intento = (std::rand() % 20) + 1;
+        int dificultadClampeada = std::clamp(dificultadEfectiva, 1, 20);
+        if (intento <= dificultadClampeada) {
+            if (faseAgitacion < 4) {
+                faseAgitacion++;
+            }
+
+            if (faseAgitacion >= 4) {
+                estaEnLaPuerta = true;
+                tiempoEnPuerta = 0.0f;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    void avanzarEnRuta() override {
+        posicionActual = TipoCamara::CAM_05_BANOS;
+    }
+};
+
 class TheUsher : public Personaje {
 public:
     TheUsher(int dif) : Personaje("The Usher", dif) {}
@@ -160,6 +261,7 @@ public:
                 break;
             case TipoCamara::CAM_02_PASILLO_A:
                 estaEnLaPuerta = true;
+                tiempoEnPuerta = 0.0f;
                 break;
             default:
                 break;
@@ -167,10 +269,25 @@ public:
     }
 };
 
-// --- TICKETY STUB: Llega por la Puerta Izquierda (ruta rápida) ---
 class TicketyStub : public Personaje {
 public:
     TicketyStub(int dif) : Personaje("Tickety Stub", dif) {}
+
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
+        (void)camaraObservada;
+        if (estaAdentro || estaEnLaPuerta) {
+            return false;
+        }
+
+        int intento = (std::rand() % 20) + 1;
+        int dificultadClampeada = std::clamp(dificultadEfectiva + 3, 1, 20);
+        if (intento <= dificultadClampeada) {
+            avanzarEnRuta();
+            return true;
+        }
+
+        return false;
+    }
 
     void avanzarEnRuta() override {
         switch (posicionActual) {
@@ -179,6 +296,7 @@ public:
                 break;
             case TipoCamara::CAM_02_PASILLO_A:
                 estaEnLaPuerta = true;
+                tiempoEnPuerta = 0.0f;
                 break;
             default:
                 break;

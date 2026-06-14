@@ -75,6 +75,7 @@ private:
     sf::Clock relojVictoria;
     sf::Clock relojInterferenciaMonitor;
     sf::Clock relojParpadeoInterferencia;
+    sf::Clock relojTickIA;
     
     // Control del Tiempo y Victoria
     sf::Clock relojNoche;
@@ -90,6 +91,9 @@ private:
     bool interferenciaMonitorActiva;
     float duracionInterferenciaMonitor;
     int fotogramaInterferenciaMonitor;
+    float intervaloTickIA;
+    float acumuladorTickIA;
+    bool controlesBloqueados;
 
     std::map<std::string, sf::SoundBuffer> buffersAudio;
     std::optional<sf::Sound> sonidoIntroNoche1;
@@ -300,19 +304,76 @@ private:
     }
 
     struct CurvaDificultadHoraria {
-        float intervaloIntentos;
         int bonoDado;
     };
 
     CurvaDificultadHoraria obtenerCurvaDificultadHoraria() const {
         switch (horaActual) {
-            case 12: return {9.0f, 0};
-            case 1:  return {7.8f, 1};
-            case 2:  return {6.6f, 2};
-            case 3:  return {5.0f, 3};
-            case 4:  return {3.8f, 5};
-            case 5:  return {2.4f, 7};
-            default: return {9.0f, 0};
+            case 12: return {0};
+            case 1:  return {1};
+            case 2:  return {2};
+            case 3:  return {3};
+            case 4:  return {5};
+            case 5:  return {7};
+            default: return {0};
+        }
+    }
+
+    int calcularDificultadBasePorPersonaje(const Personaje& personaje) const {
+        int bonoHorario = obtenerCurvaDificultadHoraria().bonoDado;
+
+        if (personaje.getNombre() == "Gobo") {
+            return std::clamp(12 + bonoHorario + 2, 1, 20);
+        }
+        if (personaje.getNombre() == "Director") {
+            return std::clamp(14 + bonoHorario + 1, 1, 20);
+        }
+        if (personaje.getNombre() == "Popy") {
+            return std::clamp(10 + bonoHorario, 1, 20);
+        }
+        if (personaje.getNombre() == "The Usher") {
+            return std::clamp(16 + bonoHorario - 1, 1, 20);
+        }
+        if (personaje.getNombre() == "Tickety Stub") {
+            return std::clamp(8 + bonoHorario + 3, 1, 20);
+        }
+
+        return std::clamp(10 + bonoHorario, 1, 20);
+    }
+
+    void procesarTickIA() {
+        if (estadoJuego != EstadoJuego::Jugando || introNoche1Activa) {
+            return;
+        }
+
+        bool camaraPopyObservada = jugador.esMonitorAbierto() &&
+                                   monitor.getCamaraActual() == TipoCamara::CAM_05_BANOS;
+
+        gobo.procesarTickMovimiento(calcularDificultadBasePorPersonaje(gobo));
+        director.procesarTickMovimiento(calcularDificultadBasePorPersonaje(director));
+        popy.procesarTickMovimiento(calcularDificultadBasePorPersonaje(popy), camaraPopyObservada);
+        usher.procesarTickMovimiento(calcularDificultadBasePorPersonaje(usher));
+        stub.procesarTickMovimiento(calcularDificultadBasePorPersonaje(stub));
+
+        if (gobo.esEstaAdentro()) {
+            iniciarAtaque(gobo.getNombre());
+            return;
+        }
+        if (director.esEstaAdentro()) {
+            iniciarAtaque(director.getNombre());
+            return;
+        }
+        if (popy.esEstaAdentro()) {
+            iniciarAtaque(popy.getNombre());
+            return;
+        }
+        if (usher.esEstaAdentro()) {
+            iniciarAtaque(usher.getNombre());
+            return;
+        }
+        if (stub.esEstaAdentro()) {
+            iniciarAtaque(stub.getNombre());
+            return;
         }
     }
 
@@ -397,6 +458,7 @@ private:
         atacanteActual = nombreAtacante;
         retrasoAtaque = 1.0f + (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * 2.0f;
         estadoJuego = EstadoJuego::AtaquePendiente;
+        controlesBloqueados = true;
         relojEstado.restart();
         reproducirSonido("ataque", 42.0f);
         std::cerr << "[ATAQUE] " << atacanteActual << " entro. Jumpscare en "
@@ -407,6 +469,7 @@ private:
         estadoJuego = EstadoJuego::Jumpscare;
         juegoTerminado = true;
         victoria = false;
+        controlesBloqueados = true;
         relojEstado.restart();
         reproducirSonido("jumpscare", 86.0f);
     }
@@ -415,6 +478,7 @@ private:
         estadoJuego = EstadoJuego::Victoria;
         juegoTerminado = true;
         victoria = true;
+        controlesBloqueados = true;
         introNoche1Activa = false;
         relojVictoria.restart();
 
@@ -435,6 +499,7 @@ private:
         estadoJuego = EstadoJuego::GameOver;
         relojEstado.restart();
         introNoche1Activa = false;
+        controlesBloqueados = true;
         if (sonidoIntroNoche1.has_value()) {
             sonidoIntroNoche1->stop();
         }
@@ -460,6 +525,7 @@ private:
         acumuladorHora = 0.0f;
         juegoTerminado = false;
         victoria = false;
+        controlesBloqueados = false;
         tiempoMuerteAcumulado = 0.0f;
         retrasoAtaque = 0.0f;
         atacanteActual.clear();
@@ -566,6 +632,10 @@ private:
                 }
 
                 if (estadoJuego == EstadoJuego::Jumpscare || estadoJuego == EstadoJuego::Victoria) {
+                    continue;
+                }
+
+                if (controlesBloqueados) {
                     continue;
                 }
 
@@ -685,6 +755,32 @@ private:
         jugador.bajarEnergia(dt);
         actualizarInterferenciaMonitor();
 
+        gobo.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        director.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esLuzDerechaEncendida());
+        popy.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        usher.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        stub.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+
+        if (gobo.esEstaAdentro()) { iniciarAtaque(gobo.getNombre()); return; }
+        if (director.esEstaAdentro()) { iniciarAtaque(director.getNombre()); return; }
+        if (popy.esEstaAdentro()) { iniciarAtaque(popy.getNombre()); return; }
+        if (usher.esEstaAdentro()) { iniciarAtaque(usher.getNombre()); return; }
+        if (stub.esEstaAdentro()) { iniciarAtaque(stub.getNombre()); return; }
+
+        if (introNoche1Activa) {
+            acumuladorTickIA = 0.0f;
+        } else {
+            acumuladorTickIA += dt;
+            while (acumuladorTickIA >= intervaloTickIA) {
+                acumuladorTickIA -= intervaloTickIA;
+                procesarTickIA();
+                if (estadoJuego != EstadoJuego::Jugando) {
+                    return;
+                }
+            }
+        }
+
+        #if 0
         // Actualizar a todos los personajes
         bool puedeMoverIA = !introNoche1Activa;
         CurvaDificultadHoraria curvaIA = obtenerCurvaDificultadHoraria();
@@ -720,6 +816,7 @@ private:
             iniciarAtaque(stub.getNombre());
             return;
         }
+        #endif
 
         // Actualizar barra de energía
         float porcentajeEnergia = jugador.getEnergia() / 100.0f;
@@ -765,7 +862,7 @@ private:
             // Mostrar amenazas activas
             std::cout << "  AMENAZAS ACTIVAS:\n";
             if (gobo.esEnLaPuerta()) std::cout << "    [!] " << gobo.getNombre() << " EN LA PUERTA IZQ\n";
-            if (director.esEnLaPuerta()) std::cout << "    [!] " << director.getNombre() << " EN LA PUERTA IZQ\n";
+            if (director.esEnLaPuerta()) std::cout << "    [!] " << director.getNombre() << " EN LA PUERTA DER\n";
             if (usher.esEnLaPuerta()) std::cout << "    [!] " << usher.getNombre() << " EN LA PUERTA IZQ\n";
             if (stub.esEnLaPuerta()) std::cout << "    [!] " << stub.getNombre() << " EN LA PUERTA IZQ\n";
             if (popy.esEnLaPuerta()) std::cout << "    [!] " << popy.getNombre() << " EN LA PUERTA DER\n";
@@ -986,13 +1083,13 @@ private:
             if (jugador.esLuzIzquierdaEncendida()) {
                 ventana.draw(marcoLuzIzquierda);
                 if (gobo.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, gobo.getNombre(), true);
-                if (director.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, director.getNombre(), true);
                 if (usher.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, usher.getNombre(), true);
                 if (stub.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, stub.getNombre(), true);
             }
             
             if (jugador.esLuzDerechaEncendida()) {
                 ventana.draw(marcoLuzDerecha);
+                if (director.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, director.getNombre(), false);
                 if (popy.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, popy.getNombre(), false);
             }
         }
@@ -1100,7 +1197,10 @@ public:
               tiempoMuerteAcumulado(0.0f),
               interferenciaMonitorActiva(false),
               duracionInterferenciaMonitor(0.4f),
-              fotogramaInterferenciaMonitor(0) { // Espacio panorámico ideal para que funcione el paneo
+              fotogramaInterferenciaMonitor(0),
+              intervaloTickIA(5.0f),
+              acumuladorTickIA(0.0f),
+              controlesBloqueados(false) { // Espacio panorámico ideal para que funcione el paneo
                   
         std::srand(static_cast<unsigned int>(std::time(nullptr))); 
         generarTexturaInterferenciaMonitor();
