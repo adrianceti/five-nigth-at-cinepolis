@@ -1413,18 +1413,29 @@ private:
 
         sf::Sprite fondo(*texturaPasillo);
         sf::Vector2u tamano = texturaPasillo->getSize();
-        float escala = std::max(
-            zona.size.x / static_cast<float>(tamano.x),
-            zona.size.y / static_cast<float>(tamano.y)
+        float proporcionZona = zona.size.x / zona.size.y;
+        float proporcionTextura = static_cast<float>(tamano.x) / static_cast<float>(tamano.y);
+        sf::IntRect recorte(
+            sf::Vector2i(0, 0),
+            sf::Vector2i(static_cast<int>(tamano.x), static_cast<int>(tamano.y))
         );
-        fondo.setScale({escala, escala});
 
-        float anchoEscalado = static_cast<float>(tamano.x) * escala;
-        float altoEscalado = static_cast<float>(tamano.y) * escala;
-        fondo.setPosition({
-            zona.position.x + (zona.size.x - anchoEscalado) / 2.0f,
-            zona.position.y + (zona.size.y - altoEscalado) / 2.0f
+        if (proporcionTextura > proporcionZona) {
+            int anchoRecorte = static_cast<int>(static_cast<float>(tamano.y) * proporcionZona);
+            recorte.position.x = (static_cast<int>(tamano.x) - anchoRecorte) / 2;
+            recorte.size.x = anchoRecorte;
+        } else {
+            int altoRecorte = static_cast<int>(static_cast<float>(tamano.x) / proporcionZona);
+            recorte.position.y = (static_cast<int>(tamano.y) - altoRecorte) / 2;
+            recorte.size.y = altoRecorte;
+        }
+
+        fondo.setTextureRect(recorte);
+        fondo.setScale({
+            zona.size.x / static_cast<float>(recorte.size.x),
+            zona.size.y / static_cast<float>(recorte.size.y)
         });
+        fondo.setPosition(zona.position);
         fondo.setColor(sf::Color(145, 150, 158, 225));
         ventana.draw(fondo);
 
