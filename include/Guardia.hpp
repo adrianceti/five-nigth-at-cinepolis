@@ -62,6 +62,16 @@ public:
         }
     }
 
+    void descontarEnergiaPorcentaje(float porcentaje) {
+        if (porcentaje <= 0.0f) {
+            return;
+        }
+        energia -= porcentaje;
+        if (energia < 0.0f) {
+            energia = 0.0f;
+        }
+    }
+
     float getEnergia() const { return energia; }
     int getNivelConsumo() const { return nivelConsumo; }
     int getDispositivosActivos() const { return std::max(0, nivelConsumo - 1); }

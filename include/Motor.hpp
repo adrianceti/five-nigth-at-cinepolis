@@ -84,6 +84,8 @@ private:
     sf::Clock relojInterferenciaMonitor;
     sf::Clock relojParpadeoInterferencia;
     sf::Clock relojTickIA;
+    float tiempoLuzIzquierdaActiva;
+    float tiempoLuzDerechaActiva;
 
 
     sf::Clock relojNoche;
@@ -480,11 +482,10 @@ private:
             return monitorAbierto && camaraActualMonitor == personaje.getPosicionActual();
         };
 
-        bool movioGobo = gobo.procesarTickMovimiento(calcularDificultadBasePorPersonaje(gobo), camaraObservada(gobo));
-        bool movioDirector = director.procesarTickMovimiento(calcularDificultadBasePorPersonaje(director), camaraObservada(director));
-        bool movioPopy = popy.procesarTickMovimiento(calcularDificultadBasePorPersonaje(popy), camaraObservada(popy));
-        bool movioUsher = usher.procesarTickMovimiento(calcularDificultadBasePorPersonaje(usher), camaraObservada(usher));
-        bool movioStub = stub.procesarTickMovimiento(calcularDificultadBasePorPersonaje(stub), camaraObservada(stub));
+        bool movioGobo = gobo.procesarTickMovimiento(calcularDificultadBasePorPersonaje(gobo), camaraObservada(gobo), horaActual);
+        bool movioDirector = director.procesarTickMovimiento(calcularDificultadBasePorPersonaje(director), camaraObservada(director), horaActual);
+        bool movioPopy = popy.procesarTickMovimiento(calcularDificultadBasePorPersonaje(popy), monitorAbierto, horaActual);
+        bool movioUsher = usher.procesarTickMovimiento(calcularDificultadBasePorPersonaje(usher), camaraObservada(usher), horaActual);
 
         if (movioGobo) {
             if (gobo.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 60.0f);
@@ -495,16 +496,12 @@ private:
             else reproducirSonidoEspacial("paso_der", {1.0f, 0.0f, 0.0f}, 52.0f);
         }
         if (movioPopy) {
-            if (popy.esEnLaPuerta()) reproducirSonidoEspacial("foxy_corriendo", {1.0f, 0.0f, 0.0f}, 78.0f);
-            else reproducirSonidoEspacial("paso_der", {1.0f, 0.0f, 0.0f}, 48.0f);
+            if (popy.esEnLaPuerta()) reproducirSonidoEspacial("foxy_corriendo", {-1.0f, 0.0f, 0.0f}, 78.0f);
+            else reproducirSonidoEspacial("paso_izq", {-1.0f, 0.0f, 0.0f}, 48.0f);
         }
         if (movioUsher) {
-            if (usher.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 58.0f);
-            else reproducirSonidoEspacial("paso_izq", {-1.0f, 0.0f, 0.0f}, 48.0f);
-        }
-        if (movioStub) {
-            if (stub.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 58.0f);
-            else reproducirSonidoEspacial("paso_izq", {-1.0f, 0.0f, 0.0f}, 48.0f);
+            if (usher.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {1.0f, 0.0f, 0.0f}, 58.0f);
+            else reproducirSonidoEspacial("paso_der", {1.0f, 0.0f, 0.0f}, 48.0f);
         }
 
         if (gobo.esEstaAdentro()) {
@@ -521,10 +518,6 @@ private:
         }
         if (usher.esEstaAdentro()) {
             iniciarAtaque(usher.getNombre());
-            return;
-        }
-        if (stub.esEstaAdentro()) {
-            iniciarAtaque(stub.getNombre());
             return;
         }
     }
@@ -671,7 +664,6 @@ private:
         director.resetear();
         popy.resetear();
         usher.resetear();
-        stub.resetear();
 
         horaActual = 12;
         acumuladorHora = 0.0f;
@@ -704,6 +696,8 @@ private:
         relojVictoria.restart();
         relojInterferenciaMonitor.restart();
         relojParpadeoInterferencia.restart();
+        tiempoLuzIzquierdaActiva = 0.0f;
+        tiempoLuzDerechaActiva = 0.0f;
 
         if (sonidoIntroNoche1.has_value()) {
             sonidoIntroNoche1->stop();
@@ -992,21 +986,45 @@ private:
 
         EventoPuerta eventoGobo = gobo.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
         EventoPuerta eventoDirector = director.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzDerechaEncendida());
-        EventoPuerta eventoPopy = popy.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzDerechaEncendida());
-        EventoPuerta eventoUsher = usher.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
-        EventoPuerta eventoStub = stub.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoPopy = popy.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoUsher = usher.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esMonitorAbierto(), false);
 
         if (eventoGobo == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 68.0f);
         if (eventoDirector == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 68.0f);
-        if (eventoPopy == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 70.0f);
-        if (eventoUsher == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 66.0f);
-        if (eventoStub == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 66.0f);
+        if (eventoPopy == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 70.0f);
+        if (eventoUsher == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 66.0f);
 
         if (eventoGobo == EventoPuerta::Entrada) { iniciarAtaque(gobo.getNombre()); return; }
         if (eventoDirector == EventoPuerta::Entrada) { iniciarAtaque(director.getNombre()); return; }
         if (eventoPopy == EventoPuerta::Entrada) { iniciarAtaque(popy.getNombre()); return; }
         if (eventoUsher == EventoPuerta::Entrada) { iniciarAtaque(usher.getNombre()); return; }
-        if (eventoStub == EventoPuerta::Entrada) { iniciarAtaque(stub.getNombre()); return; }
+        if (jugador.esMonitorAbierto() &&
+            !jugador.esPuertaDerechaCerrada() &&
+            usher.getPosicionActual() == TipoCamara::CAM_03_PASILLO_B &&
+            !usher.esEnLaPuerta()) {
+            iniciarJumpscare();
+            return;
+        }
+
+        if (jugador.esLuzIzquierdaEncendida() && gobo.esEnLaPuerta()) {
+            tiempoLuzIzquierdaActiva += dt;
+            if (tiempoLuzIzquierdaActiva >= 0.8f) {
+                gobo.resetear();
+                tiempoLuzIzquierdaActiva = 0.0f;
+            }
+        } else {
+            tiempoLuzIzquierdaActiva = 0.0f;
+        }
+
+        if (jugador.esLuzDerechaEncendida() && director.esEnLaPuerta()) {
+            tiempoLuzDerechaActiva += dt;
+            if (tiempoLuzDerechaActiva >= 0.8f) {
+                director.resetear();
+                tiempoLuzDerechaActiva = 0.0f;
+            }
+        } else {
+            tiempoLuzDerechaActiva = 0.0f;
+        }
 
         if (jugador.getEnergia() <= 0.0f) {
             pasarAGameOver();
@@ -1335,19 +1353,14 @@ private:
                 jugador.esLuzDerechaEncendida());
 
 
-            if (jugador.esLuzIzquierdaEncendida()) {
-                if (!jugador.esPuertaIzquierdaCerrada()) {
-                    if (gobo.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, gobo.getNombre(), true);
-                    if (usher.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, usher.getNombre(), true);
-                    if (stub.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, stub.getNombre(), true);
-                }
+            if (!jugador.esPuertaIzquierdaCerrada()) {
+                if (gobo.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, gobo.getNombre(), true, jugador.esLuzIzquierdaEncendida());
+                if (popy.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, popy.getNombre(), true, jugador.esLuzIzquierdaEncendida());
             }
 
-            if (jugador.esLuzDerechaEncendida()) {
-                if (!jugador.esPuertaDerechaCerrada()) {
-                    if (director.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, director.getNombre(), false);
-                    if (popy.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, popy.getNombre(), false);
-                }
+            if (!jugador.esPuertaDerechaCerrada()) {
+                if (director.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, director.getNombre(), false, jugador.esLuzDerechaEncendida());
+                if (usher.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, usher.getNombre(), false, jugador.esLuzDerechaEncendida());
             }
         }
 
@@ -1364,8 +1377,6 @@ private:
             if (director.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Director");
             if (popy.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Popy");
             if (usher.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TheUsher");
-            if (stub.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TicketyStub");
-
             if (fuenteUICargada) {
                 monitor.dibujarRutaPersonaje(
                     ventana, fuenteUI, "Gobo",
@@ -1383,10 +1394,6 @@ private:
                     ventana, fuenteUI, "The Usher",
                     {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_02_PASILLO_A},
                     usher.getPosicionActual(), usher.esEnLaPuerta(), 3);
-                monitor.dibujarRutaPersonaje(
-                    ventana, fuenteUI, "Tickety Stub",
-                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_02_PASILLO_A},
-                    stub.getPosicionActual(), stub.esEnLaPuerta(), 4);
             }
             }
         } else {
@@ -1547,13 +1554,14 @@ private:
         }
     }
 
-    void renderizarPersonajeEnPuerta(sf::RenderWindow& ventana, const std::string& nombre, bool esIzquierda) {
+    void renderizarPersonajeEnPuerta(sf::RenderWindow& ventana, const std::string& nombre, bool esIzquierda, bool luzEncendida) {
         static const std::vector<std::string> permitidos = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
         std::string clave = getClavePersonajePuerta(nombre);
         if (std::find(permitidos.begin(), permitidos.end(), clave) == permitidos.end()) return;
 
         if (spritesPersonajesPuerta.find(clave) != spritesPersonajesPuerta.end()) {
             sf::Sprite sprite = spritesPersonajesPuerta.at(clave);
+            sprite.setColor(luzEncendida ? sf::Color(235, 235, 235, 240) : sf::Color(55, 55, 55, 220));
 
             if (esIzquierda) {
                 sprite.setPosition(sf::Vector2f(160.0f, 650.0f));
@@ -1593,6 +1601,8 @@ public:
               relojInterferenciaMonitor(),
               relojParpadeoInterferencia(),
               relojNoche(),
+              tiempoLuzIzquierdaActiva(0.0f),
+              tiempoLuzDerechaActiva(0.0f),
               estadoJuego(EstadoJuego::MenuPrincipal),
               horaActual(12),
               tiempoPorHora(86.0f),

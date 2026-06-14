@@ -19,6 +19,8 @@ protected:
     bool estaEnLaPuerta;
     bool estaAdentro;
     float tiempoEnPuerta;
+    float tiempoBajoLuz;
+    float tiempoMonitorAbierto;
 
 public:
     Personaje(std::string nom, int dif)
@@ -27,35 +29,43 @@ public:
           dificultad(dif),
           estaEnLaPuerta(false),
           estaAdentro(false),
-          tiempoEnPuerta(0.0f) {}
+          tiempoEnPuerta(0.0f),
+          tiempoBajoLuz(0.0f),
+          tiempoMonitorAbierto(0.0f) {}
 
     virtual ~Personaje() = default;
 
     virtual EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool monitorAbierto, bool luzEncendida = true) {
-        (void)luzEncendida;
-        if (estaAdentro) {
+        if (estaAdentro || !estaEnLaPuerta) {
             return EventoPuerta::Ninguno;
         }
 
-        if (estaEnLaPuerta) {
-            if (puertaCerrada) {
+        if (luzEncendida) {
+            tiempoBajoLuz += dt;
+            if (tiempoBajoLuz >= 0.8f) {
                 resetear();
                 return EventoPuerta::Golpe;
             }
+        } else {
+            tiempoBajoLuz = 0.0f;
+        }
 
-            if (monitorAbierto) {
+        if (monitorAbierto && !puertaCerrada) {
+            tiempoMonitorAbierto += dt;
+            if (tiempoMonitorAbierto >= 1.2f) {
                 estaAdentro = true;
                 estaEnLaPuerta = false;
                 return EventoPuerta::Entrada;
             }
-
-            tiempoEnPuerta += dt;
+        } else {
+            tiempoMonitorAbierto = 0.0f;
         }
 
         return EventoPuerta::Ninguno;
     }
 
-    virtual bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) {
+    virtual bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false, int horaActual = 12) {
+        (void)horaActual;
         if (estaAdentro || estaEnLaPuerta || camaraObservada) {
             return false;
         }
@@ -77,10 +87,12 @@ public:
         estaEnLaPuerta = false;
         estaAdentro = false;
         tiempoEnPuerta = 0.0f;
+        tiempoBajoLuz = 0.0f;
+        tiempoMonitorAbierto = 0.0f;
     }
 
     virtual float tiempoPermanenciaPuerta() const {
-        return 3.5f;
+        return 1.2f;
     }
 
     std::string getNombre() const { return nombre; }
@@ -93,31 +105,8 @@ class Gobo : public Personaje {
 public:
     Gobo(int dif) : Personaje("Gobo", dif) {}
 
-    EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool monitorAbierto, bool luzEncendida = true) override {
-        (void)luzEncendida;
-        if (estaAdentro) {
-            return EventoPuerta::Ninguno;
-        }
-
-        if (estaEnLaPuerta) {
-            if (puertaCerrada) {
-                resetear();
-                return EventoPuerta::Golpe;
-            }
-
-            if (monitorAbierto) {
-                estaAdentro = true;
-                estaEnLaPuerta = false;
-                return EventoPuerta::Entrada;
-            }
-
-            tiempoEnPuerta += dt;
-        }
-
-        return EventoPuerta::Ninguno;
-    }
-
-    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false, int horaActual = 12) override {
+        (void)horaActual;
         if (estaAdentro || estaEnLaPuerta || camaraObservada) {
             return false;
         }
@@ -154,13 +143,9 @@ class Director : public Personaje {
 public:
     Director(int dif) : Personaje("Director", dif) {}
 
-    float tiempoPermanenciaPuerta() const override {
-        return 5.0f;
-    }
-
-    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
-        (void)camaraObservada;
-        if (estaAdentro || estaEnLaPuerta) {
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false, int horaActual = 12) override {
+        (void)horaActual;
+        if (estaAdentro || estaEnLaPuerta || camaraObservada) {
             return false;
         }
 
@@ -197,19 +182,25 @@ private:
     int faseAgitacion;
 
 public:
-    Popy(int dif) : Personaje("Popy", dif), faseAgitacion(0) {}
+    Popy(int dif)
+        : Personaje("Popy", dif),
+          faseAgitacion(0) {
+        posicionActual = TipoCamara::CAM_05_BANOS;
+    }
 
     void resetear() override {
-        Personaje::resetear();
+        posicionActual = TipoCamara::CAM_05_BANOS;
+        estaEnLaPuerta = false;
+        estaAdentro = false;
+        tiempoEnPuerta = 0.0f;
+        tiempoBajoLuz = 0.0f;
+        tiempoMonitorAbierto = 0.0f;
         faseAgitacion = 0;
     }
 
-    float tiempoPermanenciaPuerta() const override {
-        return 1.9f;
-    }
-
-    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
-        if (estaAdentro || estaEnLaPuerta) {
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false, int horaActual = 12) override {
+        (void)horaActual;
+        if (estaAdentro || estaEnLaPuerta || camaraObservada) {
             return false;
         }
 
@@ -223,11 +214,6 @@ public:
             return false;
         }
 
-        if (camaraObservada) {
-            faseAgitacion = std::max(0, faseAgitacion - 1);
-            return false;
-        }
-
         int intento = (std::rand() % 20) + 1;
         int dificultadClampeada = std::clamp(dificultadEfectiva, 1, 20);
         if (intento <= dificultadClampeada) {
@@ -236,6 +222,7 @@ public:
             }
 
             if (faseAgitacion >= 4) {
+                posicionActual = TipoCamara::CAM_02_PASILLO_A;
                 estaEnLaPuerta = true;
                 tiempoEnPuerta = 0.0f;
             }
@@ -243,6 +230,29 @@ public:
         }
 
         return false;
+    }
+
+    EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool monitorAbierto, bool luzEncendida = true) override {
+        (void)luzEncendida;
+        if (estaAdentro || !estaEnLaPuerta) {
+            return EventoPuerta::Ninguno;
+        }
+
+        tiempoEnPuerta += dt;
+        if (tiempoEnPuerta >= 3.0f) {
+            if (puertaCerrada) {
+                resetear();
+                return EventoPuerta::Golpe;
+            }
+
+            if (monitorAbierto) {
+                estaAdentro = true;
+                estaEnLaPuerta = false;
+                return EventoPuerta::Entrada;
+            }
+        }
+
+        return EventoPuerta::Ninguno;
     }
 
     void avanzarEnRuta() override {
@@ -254,6 +264,35 @@ class TheUsher : public Personaje {
 public:
     TheUsher(int dif) : Personaje("The Usher", dif) {}
 
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false, int horaActual = 12) override {
+        if (horaActual < 3) {
+            return false;
+        }
+
+        return Personaje::procesarTickMovimiento(dificultadEfectiva, camaraObservada, horaActual);
+    }
+
+    EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool monitorAbierto, bool luzEncendida = true) override {
+        (void)luzEncendida;
+        if (estaAdentro || !estaEnLaPuerta) {
+            return EventoPuerta::Ninguno;
+        }
+
+        if (monitorAbierto && !puertaCerrada) {
+            estaAdentro = true;
+            estaEnLaPuerta = false;
+            return EventoPuerta::Entrada;
+        }
+
+        if (monitorAbierto) {
+            tiempoMonitorAbierto += dt;
+        } else {
+            tiempoMonitorAbierto = 0.0f;
+        }
+
+        return EventoPuerta::Ninguno;
+    }
+
     void avanzarEnRuta() override {
         switch (posicionActual) {
             case TipoCamara::CAM_01_DULCERIA:
@@ -263,9 +302,9 @@ public:
                 posicionActual = TipoCamara::CAM_05_BANOS;
                 break;
             case TipoCamara::CAM_05_BANOS:
-                posicionActual = TipoCamara::CAM_02_PASILLO_A;
+                posicionActual = TipoCamara::CAM_03_PASILLO_B;
                 break;
-            case TipoCamara::CAM_02_PASILLO_A:
+            case TipoCamara::CAM_03_PASILLO_B:
                 estaEnLaPuerta = true;
                 tiempoEnPuerta = 0.0f;
                 break;
@@ -279,9 +318,9 @@ class TicketyStub : public Personaje {
 public:
     TicketyStub(int dif) : Personaje("Tickety Stub", dif) {}
 
-    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false) override {
-        (void)camaraObservada;
-        if (estaAdentro || estaEnLaPuerta) {
+    bool procesarTickMovimiento(int dificultadEfectiva, bool camaraObservada = false, int horaActual = 12) override {
+        (void)horaActual;
+        if (estaAdentro || estaEnLaPuerta || camaraObservada) {
             return false;
         }
 
