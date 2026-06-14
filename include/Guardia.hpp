@@ -56,8 +56,7 @@ public:
 
     void bajarEnergia(float tiempoTranscurrido) {
         if (energia > 0.0f) {
-            float excesoConsumo = static_cast<float>(std::max(0, nivelConsumo - 1));
-            float tasaConsumo = 0.30f + (0.22f * excesoConsumo) + (0.08f * excesoConsumo * excesoConsumo);
+            float tasaConsumo = 0.141f * static_cast<float>(nivelConsumo);
             energia -= tasaConsumo * tiempoTranscurrido;
             if (energia < 0.0f) energia = 0.0f;
         }

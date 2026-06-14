@@ -1592,7 +1592,7 @@ public:
               relojNoche(),
               estadoJuego(EstadoJuego::MenuPrincipal),
               horaActual(12),
-              tiempoPorHora(120.0f),
+              tiempoPorHora(86.0f),
               acumuladorHora(0.0f),
               juegoTerminado(false),
               victoria(false),
