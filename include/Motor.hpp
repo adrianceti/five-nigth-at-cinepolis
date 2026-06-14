@@ -1379,7 +1379,7 @@ private:
                     gobo.getPosicionActual(), gobo.esEnLaPuerta(), 0);
                 monitor.dibujarRutaPersonaje(
                     ventana, fuenteUI, "Director",
-                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_03_PASILLO_B, TipoCamara::CAM_02_PASILLO_A},
+                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_03_PASILLO_B},
                     director.getPosicionActual(), director.esEnLaPuerta(), 1);
                 monitor.dibujarRutaPersonaje(
                     ventana, fuenteUI, "Popy",
@@ -1387,7 +1387,7 @@ private:
                     popy.getPosicionActual(), popy.esEnLaPuerta(), 2);
                 monitor.dibujarRutaPersonaje(
                     ventana, fuenteUI, "The Usher",
-                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_02_PASILLO_A},
+                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_03_PASILLO_B},
                     usher.getPosicionActual(), usher.esEnLaPuerta(), 3);
             }
             }

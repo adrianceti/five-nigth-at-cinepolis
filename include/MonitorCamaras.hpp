@@ -31,6 +31,8 @@ private:
     std::map<std::string, sf::Texture> texturasPersonajes;
     sf::Texture texturaMapaCamaras;
     bool mapaCamarasCargado;
+    sf::Font fuenteMapa;
+    bool fuenteMapaCargada;
 
     std::map<std::string, bool> personajesPorCamara;
     std::map<std::string, sf::Sprite> spritesPersonajes;
@@ -38,6 +40,15 @@ private:
     bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
         for (const auto& ruta : rutas) {
             if (textura.loadFromFile(ruta)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool cargarFuenteDesdeRutas(sf::Font& fuente, const std::vector<std::string>& rutas) {
+        for (const auto& ruta : rutas) {
+            if (fuente.openFromFile(ruta)) {
                 return true;
             }
         }
@@ -133,6 +144,40 @@ private:
             case TipoCamara::CAM_05_BANOS:     return "BANOS";
         }
         return "?";
+    }
+
+    void dibujarNavegacionCamaras(sf::RenderWindow& ventana) const {
+        const std::vector<TipoCamara> camaras = {
+            TipoCamara::CAM_01_DULCERIA,
+            TipoCamara::CAM_02_PASILLO_A,
+            TipoCamara::CAM_03_PASILLO_B,
+            TipoCamara::CAM_04_SALAS,
+            TipoCamara::CAM_05_BANOS
+        };
+
+        sf::RectangleShape fondo({162.f, 174.f});
+        fondo.setPosition({16.f, 520.f});
+        fondo.setFillColor(sf::Color(0, 0, 0, 118));
+        fondo.setOutlineThickness(1.f);
+        fondo.setOutlineColor(sf::Color(180, 255, 180, 70));
+        ventana.draw(fondo);
+
+        for (size_t i = 0; i < camaras.size(); ++i) {
+            bool activa = camaras[i] == camaraActual;
+            sf::RectangleShape boton({138.f, 24.f});
+            boton.setPosition({28.f, 532.f + static_cast<float>(i) * 30.f});
+            boton.setFillColor(activa ? sf::Color(180, 255, 80, 215) : sf::Color(10, 26, 14, 190));
+            boton.setOutlineThickness(activa ? 2.f : 1.f);
+            boton.setOutlineColor(activa ? sf::Color(245, 255, 180, 245) : sf::Color(80, 180, 100, 140));
+            ventana.draw(boton);
+
+            if (fuenteMapaCargada) {
+                sf::Text texto(fuenteMapa, getNombreCamaraCorto(camaras[i]), 12);
+                texto.setFillColor(activa ? sf::Color::Black : sf::Color(220, 255, 220));
+                texto.setPosition({38.f, 533.f + static_cast<float>(i) * 30.f});
+                ventana.draw(texto);
+            }
+        }
     }
 
     std::string getClaveTexturaPersonaje(const std::string& nombre) const {
@@ -396,7 +441,8 @@ public:
         : camaraActual(TipoCamara::CAM_01_DULCERIA),
           generadorAleatorio(std::random_device{}()),
           distribucionEstadistica(0, 100),
-          mapaCamarasCargado(false) {
+          mapaCamarasCargado(false),
+          fuenteMapaCargada(false) {
 
 
         cajaMapa.setSize(tamanoPantalla());
@@ -409,6 +455,12 @@ public:
         cargarTexturasFondo();
         cargarTexturasPersonajes();
         mapaCamarasCargado = cargarMapaCamaras();
+        fuenteMapaCargada = cargarFuenteDesdeRutas(fuenteMapa, {
+            "assets/fonts/arial.ttf",
+            "../assets/fonts/arial.ttf",
+            "assets/fonts/Roboto-Regular.ttf",
+            "../assets/fonts/Roboto-Regular.ttf"
+        });
 
 
         std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
@@ -564,24 +616,7 @@ public:
 
         ventana.draw(cajaMapa);
 
-        if (mapaCamarasCargado) {
-            sf::RectangleShape panelMapa({392.f, 302.f});
-            panelMapa.setPosition({870.f, 388.f});
-            panelMapa.setFillColor(sf::Color(0, 0, 0, 170));
-            panelMapa.setOutlineThickness(2.f);
-            panelMapa.setOutlineColor(sf::Color(235, 235, 235, 180));
-            ventana.draw(panelMapa);
-
-            sf::Sprite spriteMapa(texturaMapaCamaras);
-            const sf::Vector2u tamMapa = texturaMapaCamaras.getSize();
-            float escalaX = 380.f / static_cast<float>(tamMapa.x);
-            float escalaY = 290.f / static_cast<float>(tamMapa.y);
-            float escala = std::min(escalaX, escalaY);
-            spriteMapa.setScale({escala, escala});
-            spriteMapa.setPosition({876.f, 394.f});
-            spriteMapa.setColor(sf::Color(255, 255, 255, 240));
-            ventana.draw(spriteMapa);
-        }
+        dibujarNavegacionCamaras(ventana);
     }
 
 private:
@@ -688,52 +723,16 @@ public:
             return;
         }
 
-        float baseX = 24.f;
-        float baseY = 24.f + static_cast<float>(fila) * 58.f;
-        float nodoAncho = 74.f;
-        float nodoAlto = 26.f;
-        float espacio = 12.f;
+        float baseX = 198.f;
+        float baseY = 22.f + static_cast<float>(fila) * 20.f;
 
-        sf::RectangleShape fondo({520.f, 46.f});
-        fondo.setPosition({baseX - 10.f, baseY - 8.f});
-        fondo.setFillColor(sf::Color(0, 0, 0, 150));
-        fondo.setOutlineThickness(1.f);
-        fondo.setOutlineColor(posicionActual == camaraActual ? sf::Color(255, 220, 80) : sf::Color(0, 180, 80));
-        ventana.draw(fondo);
-
-        sf::Text etiqueta(fuente, nombre + (enPuerta ? "  PUERTA" : ""), 15);
-        etiqueta.setFillColor(posicionActual == camaraActual ? sf::Color(255, 230, 120) : sf::Color(200, 255, 210));
-        etiqueta.setPosition({baseX, baseY - 4.f});
+        sf::Text etiqueta(fuente, nombre + (enPuerta ? " PUERTA" : ""), 12);
+        etiqueta.setFillColor(enPuerta ? sf::Color(255, 120, 90) :
+                              posicionActual == camaraActual ? sf::Color(255, 230, 120) : sf::Color(200, 255, 210));
+        etiqueta.setOutlineColor(sf::Color::Black);
+        etiqueta.setOutlineThickness(1.f);
+        etiqueta.setPosition({baseX, baseY});
         ventana.draw(etiqueta);
-
-        float rutaX = baseX + 145.f;
-        float rutaY = baseY;
-        for (size_t i = 0; i < ruta.size(); i++) {
-            float x = rutaX + static_cast<float>(i) * (nodoAncho + espacio);
-            bool esCamaraActual = ruta[i] == camaraActual;
-            bool estaAqui = ruta[i] == posicionActual && !enPuerta;
-
-            sf::RectangleShape nodo({nodoAncho, nodoAlto});
-            nodo.setPosition({x, rutaY});
-            nodo.setFillColor(estaAqui ? sf::Color(255, 220, 80, 220)
-                                       : esCamaraActual ? sf::Color(30, 120, 70, 210)
-                                                       : sf::Color(10, 35, 20, 210));
-            nodo.setOutlineThickness(1.f);
-            nodo.setOutlineColor(esCamaraActual ? sf::Color(255, 255, 255) : sf::Color(0, 170, 80));
-            ventana.draw(nodo);
-
-            sf::Text textoNodo(fuente, getNombreCamaraCorto(ruta[i]), 13);
-            textoNodo.setFillColor(estaAqui ? sf::Color::Black : sf::Color(220, 255, 220));
-            textoNodo.setPosition({x + 8.f, rutaY + 5.f});
-            ventana.draw(textoNodo);
-
-            if (i + 1 < ruta.size()) {
-                sf::RectangleShape conector({espacio, 2.f});
-                conector.setPosition({x + nodoAncho, rutaY + nodoAlto / 2.f});
-                conector.setFillColor(sf::Color(0, 170, 80));
-                ventana.draw(conector);
-            }
-        }
     }
 
     void mostrarEnTerminal() const {
