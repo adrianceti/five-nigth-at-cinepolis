@@ -1552,18 +1552,15 @@ public:
             });
         }
 
-        pasilloIzquierdoCargado = cargarTextureDesdeRutas(texturaPasilloIzquierda, {
-            "assets/textures/camaras/pasillo-a/pasillo-a.png",
-            "../assets/textures/camaras/pasillo-a/pasillo-a.png",
-            "assets/textures/camaras/pasillo_b/pasillo_b.png",
-            "../assets/textures/camaras/pasillo_b/pasillo_b.png"
-        });
-        pasilloDerechoCargado = cargarTextureDesdeRutas(texturaPasilloDerecha, {
-            "assets/textures/camaras/pasillo-b/pasillo-b.png",
-            "../assets/textures/camaras/pasillo-b/pasillo-b.png",
-            "assets/textures/camaras/pasillo_a/pasillo_a.png",
-            "../assets/textures/camaras/pasillo_a/pasillo_a.png"
-        });
+        // Usar la misma imagen de oficina para los fondos de puerta en lugar de los pasillos
+        pasilloIzquierdoCargado = spriteOficina.has_value();
+        if (pasilloIzquierdoCargado) {
+            texturaPasilloIzquierda = texturaOficina;
+        }
+        pasilloDerechoCargado = spriteOficina.has_value();
+        if (pasilloDerechoCargado) {
+            texturaPasilloDerecha = texturaOficina;
+        }
 
         // Cargar texturas de personajes para las puertas
         cargarTexturasPersonajesPuerta();
