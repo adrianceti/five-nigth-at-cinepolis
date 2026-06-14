@@ -1373,10 +1373,10 @@ private:
             } else {
 
 
-            if (gobo.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Gobo");
-            if (director.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Director");
-            if (popy.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Popy");
-            if (usher.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TheUsher");
+            if (!gobo.esEnLaPuerta() && gobo.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Gobo");
+            if (!director.esEnLaPuerta() && director.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Director");
+            if (!popy.esEnLaPuerta() && popy.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Popy");
+            if (!usher.esEnLaPuerta() && usher.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TheUsher");
             if (fuenteUICargada) {
                 monitor.dibujarRutaPersonaje(
                     ventana, fuenteUI, "Gobo",
