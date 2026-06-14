@@ -30,6 +30,10 @@ private:
 
     sf::Texture texturaOficina;
     std::optional<sf::Sprite> spriteOficina;
+    sf::Texture texturaPasilloIzquierda;
+    sf::Texture texturaPasilloDerecha;
+    bool pasilloIzquierdoCargado;
+    bool pasilloDerechoCargado;
     sf::Texture texturaMenuPrincipal;
     std::optional<sf::Sprite> spriteMenuPrincipal;
     sf::Font fuenteUI;
@@ -1309,6 +1313,8 @@ private:
         hueco.setOutlineThickness(0.0f);
         ventana.draw(hueco);
 
+        dibujarFondoPasilloPuerta(ventana, zona, esIzquierda);
+
         sf::IntRect recorte = esIzquierda
             ? sf::IntRect(sf::Vector2i(0, 184), sf::Vector2i(222, 430))
             : sf::IntRect(sf::Vector2i(1360, 116), sf::Vector2i(187, 462));
@@ -1365,6 +1371,41 @@ private:
         ventana.draw(luzBoton);
     }
 
+    void dibujarFondoPasilloPuerta(sf::RenderWindow& ventana, const sf::FloatRect& zona, bool esIzquierda) {
+        const sf::Texture* texturaPasillo = nullptr;
+        if (esIzquierda && pasilloIzquierdoCargado) {
+            texturaPasillo = &texturaPasilloIzquierda;
+        } else if (!esIzquierda && pasilloDerechoCargado) {
+            texturaPasillo = &texturaPasilloDerecha;
+        }
+
+        if (texturaPasillo == nullptr) {
+            return;
+        }
+
+        sf::Sprite fondo(*texturaPasillo);
+        sf::Vector2u tamano = texturaPasillo->getSize();
+        float escala = std::max(
+            zona.size.x / static_cast<float>(tamano.x),
+            zona.size.y / static_cast<float>(tamano.y)
+        );
+        fondo.setScale({escala, escala});
+
+        float anchoEscalado = static_cast<float>(tamano.x) * escala;
+        float altoEscalado = static_cast<float>(tamano.y) * escala;
+        fondo.setPosition({
+            zona.position.x + (zona.size.x - anchoEscalado) / 2.0f,
+            zona.position.y + (zona.size.y - altoEscalado) / 2.0f
+        });
+        fondo.setColor(sf::Color(145, 150, 158, 225));
+        ventana.draw(fondo);
+
+        sf::RectangleShape oscuridad({zona.size.x, zona.size.y});
+        oscuridad.setPosition(zona.position);
+        oscuridad.setFillColor(sf::Color(0, 0, 0, 72));
+        ventana.draw(oscuridad);
+    }
+
     void renderizarPersonajeEnPuerta(sf::RenderWindow& ventana, const std::string& nombre, bool esIzquierda) {
         static const std::vector<std::string> permitidos = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
         std::string clave = getClavePersonajePuerta(nombre);
@@ -1390,6 +1431,8 @@ public:
               posicionCamaraX(0.0f),
               velocidadCamara(600.0f),
               anchoVirtualOficina(1640.0f),
+              pasilloIzquierdoCargado(false),
+              pasilloDerechoCargado(false),
               visualPuertaIzquierda(),
               visualPuertaDerecha(),
               marcoLuzIzquierda(),
@@ -1508,6 +1551,19 @@ public:
                 720.0f / static_cast<float>(texturaOficina.getSize().y)
             });
         }
+
+        pasilloIzquierdoCargado = cargarTextureDesdeRutas(texturaPasilloIzquierda, {
+            "assets/textures/camaras/pasillo-a/pasillo-a.png",
+            "../assets/textures/camaras/pasillo-a/pasillo-a.png",
+            "assets/textures/camaras/pasillo_b/pasillo_b.png",
+            "../assets/textures/camaras/pasillo_b/pasillo_b.png"
+        });
+        pasilloDerechoCargado = cargarTextureDesdeRutas(texturaPasilloDerecha, {
+            "assets/textures/camaras/pasillo-b/pasillo-b.png",
+            "../assets/textures/camaras/pasillo-b/pasillo-b.png",
+            "assets/textures/camaras/pasillo_a/pasillo_a.png",
+            "../assets/textures/camaras/pasillo_a/pasillo_a.png"
+        });
 
         // Cargar texturas de personajes para las puertas
         cargarTexturasPersonajesPuerta();
