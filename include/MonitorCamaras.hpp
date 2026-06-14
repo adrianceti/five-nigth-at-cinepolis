@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <cctype>
 #include <algorithm>
+#include <cmath>
 
 enum class TipoCamara {
     CAM_01_DULCERIA,
@@ -147,37 +148,48 @@ private:
     }
 
     void dibujarNavegacionCamaras(sf::RenderWindow& ventana) const {
-        const std::vector<TipoCamara> camaras = {
-            TipoCamara::CAM_01_DULCERIA,
-            TipoCamara::CAM_02_PASILLO_A,
-            TipoCamara::CAM_03_PASILLO_B,
-            TipoCamara::CAM_04_SALAS,
-            TipoCamara::CAM_05_BANOS
-        };
+        const sf::Vector2f tamanoPantalla = this->tamanoPantalla();
+        const sf::Vector2f tamano(360.f, 304.f);
+        const sf::Vector2f origen(tamanoPantalla.x - tamano.x - 16.f, 16.f);
 
-        sf::RectangleShape fondo({162.f, 174.f});
-        fondo.setPosition({16.f, 520.f});
-        fondo.setFillColor(sf::Color(0, 0, 0, 118));
-        fondo.setOutlineThickness(1.f);
-        fondo.setOutlineColor(sf::Color(180, 255, 180, 70));
-        ventana.draw(fondo);
-
-        for (size_t i = 0; i < camaras.size(); ++i) {
-            bool activa = camaras[i] == camaraActual;
-            sf::RectangleShape boton({138.f, 24.f});
-            boton.setPosition({28.f, 532.f + static_cast<float>(i) * 30.f});
-            boton.setFillColor(activa ? sf::Color(180, 255, 80, 215) : sf::Color(10, 26, 14, 190));
-            boton.setOutlineThickness(activa ? 2.f : 1.f);
-            boton.setOutlineColor(activa ? sf::Color(245, 255, 180, 245) : sf::Color(80, 180, 100, 140));
-            ventana.draw(boton);
-
-            if (fuenteMapaCargada) {
-                sf::Text texto(fuenteMapa, getNombreCamaraCorto(camaras[i]), 12);
-                texto.setFillColor(activa ? sf::Color::Black : sf::Color(220, 255, 220));
-                texto.setPosition({38.f, 533.f + static_cast<float>(i) * 30.f});
-                ventana.draw(texto);
-            }
+        if (!mapaCamarasCargado) {
+            return;
         }
+
+        sf::Sprite mapa(texturaMapaCamaras);
+        const sf::Vector2u tamTex = texturaMapaCamaras.getSize();
+        if (tamTex.x == 0 || tamTex.y == 0) {
+            return;
+        }
+
+        sf::IntRect recorte(sf::Vector2i(700, 90), sf::Vector2i(900, 760));
+        float escala = std::min(
+            tamano.x / static_cast<float>(recorte.size.x),
+            tamano.y / static_cast<float>(recorte.size.y)
+        );
+
+        sf::Color base = obtenerColorFondo();
+        sf::RectangleShape fondoMapa(tamano);
+        fondoMapa.setPosition(origen);
+        fondoMapa.setFillColor(sf::Color(
+            static_cast<std::uint8_t>(base.r * 0.30f),
+            static_cast<std::uint8_t>(base.g * 0.30f),
+            static_cast<std::uint8_t>(base.b * 0.30f),
+            225
+        ));
+        ventana.draw(fondoMapa);
+
+        mapa.setTextureRect(recorte);
+        mapa.setPosition(origen);
+        mapa.setScale({escala, escala});
+        mapa.setColor(sf::Color(255, 255, 255, 238));
+        ventana.draw(mapa);
+
+        sf::RectangleShape cubrirTextoSuperiorDerecha({86.f, 34.f});
+        cubrirTextoSuperiorDerecha.setPosition(origen + sf::Vector2f(274.f, 0.f));
+        cubrirTextoSuperiorDerecha.setFillColor(fondoMapa.getFillColor());
+        ventana.draw(cubrirTextoSuperiorDerecha);
+
     }
 
     std::string getClaveTexturaPersonaje(const std::string& nombre) const {
@@ -613,8 +625,6 @@ public:
             linea.setFillColor(sf::Color(0, 80, 0, 120));
             ventana.draw(linea);
         }
-
-        ventana.draw(cajaMapa);
 
         dibujarNavegacionCamaras(ventana);
     }
