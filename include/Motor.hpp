@@ -701,23 +701,58 @@ private:
         return nombre;
     }
 
+    void iniciarPartidaDesdeMenu() {
+        if (sonidoMenuPrincipal.has_value()) {
+            sonidoMenuPrincipal->stop();
+        }
+        estadoJuego = EstadoJuego::Jugando;
+        relojNoche.restart();
+        relojEnergia.restart();
+        controlesBloqueados = false;
+    }
+
+    bool clicEnBotonPuerta(sf::Vector2i posicionClick, bool esIzquierda) const {
+        sf::FloatRect zona = esIzquierda
+            ? visualPuertaIzquierda.getGlobalBounds()
+            : visualPuertaDerecha.getGlobalBounds();
+
+        sf::Vector2f posicionBoton(
+            esIzquierda ? zona.position.x + zona.size.x - 56.0f : zona.position.x + 24.0f,
+            zona.position.y + 318.0f
+        );
+
+        sf::Vector2i esquinaSuperior = ventana.mapCoordsToPixel(
+            posicionBoton - sf::Vector2f(18.0f, 18.0f),
+            vistaOficina
+        );
+        sf::Vector2i esquinaInferior = ventana.mapCoordsToPixel(
+            posicionBoton + sf::Vector2f(50.0f, 74.0f),
+            vistaOficina
+        );
+
+        return posicionClick.x >= esquinaSuperior.x &&
+               posicionClick.x <= esquinaInferior.x &&
+               posicionClick.y >= esquinaSuperior.y &&
+               posicionClick.y <= esquinaInferior.y;
+    }
+
     void procesarEventos() {
         while (const std::optional<sf::Event> evento = ventana.pollEvent()) {
             if (evento->is<sf::Event::Closed>()) {
                 ventana.close();
+                continue;
             }
 
-
             if (estadoJuego == EstadoJuego::MenuPrincipal) {
-                if (evento->is<sf::Event::MouseButtonPressed>()) {
-
-                    if (sonidoMenuPrincipal.has_value()) {
-                        sonidoMenuPrincipal->stop();
+                if (const auto* click = evento->getIf<sf::Event::MouseButtonReleased>()) {
+                    if (click->button == sf::Mouse::Button::Left) {
+                        iniciarPartidaDesdeMenu();
                     }
-                    estadoJuego = EstadoJuego::Jugando;
-                    relojNoche.restart();
-                    relojEnergia.restart();
-                    controlesBloqueados = false;
+                } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
+                    if (tecla->code == sf::Keyboard::Key::Enter ||
+                        tecla->code == sf::Keyboard::Key::Space) {
+                        iniciarPartidaDesdeMenu();
+                    }
                 }
                 continue;
             }
@@ -727,15 +762,13 @@ private:
                     estadoJuego == EstadoJuego::Jugando &&
                     !jugador.esMonitorAbierto() &&
                     !controlesBloqueados) {
-                    sf::Vector2f mundo = ventana.mapPixelToCoords(click->position, vistaOficina);
-
-                    if (visualPuertaIzquierda.getGlobalBounds().contains(mundo)) {
+                    if (clicEnBotonPuerta(click->position, true)) {
                         jugador.alternarPuertaIzquierda();
                         reproducirSonido("puerta", 34.0f);
                         continue;
                     }
 
-                    if (visualPuertaDerecha.getGlobalBounds().contains(mundo)) {
+                    if (clicEnBotonPuerta(click->position, false)) {
                         jugador.alternarPuertaDerecha();
                         reproducirSonido("puerta", 34.0f);
                         continue;
@@ -987,12 +1020,7 @@ private:
             }
         }
 
-        if (relojTerminal.getElapsedTime().asSeconds() >= 0.1f) {
-            #ifdef _WIN32
-                std::system("cls");
-            #else
-                std::system("clear");
-            #endif
+        if (relojTerminal.getElapsedTime().asSeconds() >= 1.0f) {
             std::cout << "=========================================\n";
             std::cout << "  RELOJ DE LA NOCHE : " << horaActual << " AM \n";
             std::cout << "  ENERGIA RESTANTE  : " << static_cast<int>(jugador.getEnergia()) << "%\n";
