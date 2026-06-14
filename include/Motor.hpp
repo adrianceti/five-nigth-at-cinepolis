@@ -645,23 +645,26 @@ private:
         std::vector<std::string> carpetas = {"gobo", "director", "popy", "theusher", "ticketystub"};
         
         for (size_t i = 0; i < personajes.size(); i++) {
-            std::string rutaBase = "assets/textures/personajes/" + carpetas[i] + "/sprite" + carpetas[i] + "/";
+            std::string rutaPersonaje = "assets/textures/personajes/" + carpetas[i] + "/";
+            std::string rutaSpriteAnterior = rutaPersonaje + "sprite" + carpetas[i] + "/";
             
             sf::Texture textura;
             bool cargada = false;
             
             // Intentar múltiples variantes de nombre de archivo
             std::vector<std::string> nombresPosibles = {
-                "sprite" + carpetas[i] + ".png",
-                personajes[i] + ".png",
+                carpetas[i] + ".png",
                 "sprite.png",
-                carpetas[i] + ".png"
+                personajes[i] + ".png",
+                "sprite" + carpetas[i] + ".png"
             };
             
             for (const auto& nombre : nombresPosibles) {
                 std::vector<std::string> rutas = {
-                    rutaBase + nombre,
-                    "../" + rutaBase + nombre
+                    rutaPersonaje + nombre,
+                    "../" + rutaPersonaje + nombre,
+                    rutaSpriteAnterior + nombre,
+                    "../" + rutaSpriteAnterior + nombre
                 };
                 if (cargarTextureDesdeRutas(textura, rutas)) {
                     cargada = true;
@@ -671,10 +674,10 @@ private:
             }
             
             if (cargada) {
-                texturasPersonajesPuerta.insert({personajes[i], textura});
-                sf::Sprite sprite(textura);
+                auto texturaInsertada = texturasPersonajesPuerta.insert_or_assign(personajes[i], textura);
+                sf::Sprite sprite(texturaInsertada.first->second);
                 // Normalizar escala basándonos en el bounding box real (sin transparencias)
-                sf::IntRect bbox = obtenerBoundingBoxAlpha(textura);
+                sf::IntRect bbox = obtenerBoundingBoxAlpha(texturaInsertada.first->second);
                 const float alturaObjetivoPuerta = 300.0f; // píxeles de altura objetivo en pantalla
                 float escala = 1.0f;
                 if (bbox.size.y > 0) escala = alturaObjetivoPuerta / static_cast<float>(bbox.size.y);
@@ -686,6 +689,12 @@ private:
                 std::cerr << "⚠ No se encontró textura de puerta para " << personajes[i] << std::endl;
             }
         }
+    }
+
+    std::string getClavePersonajePuerta(const std::string& nombre) const {
+        if (nombre == "The Usher") return "TheUsher";
+        if (nombre == "Tickety Stub") return "TicketyStub";
+        return nombre;
     }
 
     void procesarEventos() {
@@ -872,13 +881,13 @@ private:
 
         EventoPuerta eventoGobo = gobo.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
         EventoPuerta eventoDirector = director.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esLuzDerechaEncendida());
-        EventoPuerta eventoPopy = popy.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
+        EventoPuerta eventoPopy = popy.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esLuzDerechaEncendida());
         EventoPuerta eventoUsher = usher.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
         EventoPuerta eventoStub = stub.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esLuzIzquierdaEncendida());
 
         if (eventoGobo == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 68.0f);
         if (eventoDirector == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 68.0f);
-        if (eventoPopy == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 70.0f);
+        if (eventoPopy == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 70.0f);
         if (eventoUsher == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 66.0f);
         if (eventoStub == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 66.0f);
 
@@ -1208,26 +1217,25 @@ private:
                 ventana.draw(spriteOficina.value());
             }
 
-            // Dibujar puertas visuales
-            if (jugador.esPuertaIzquierdaCerrada()) {
-                ventana.draw(visualPuertaIzquierda);
-            }
-            if (jugador.esPuertaDerechaCerrada()) {
-                ventana.draw(visualPuertaDerecha);
-            }
+            dibujarPuertaOficina(ventana, true, jugador.esPuertaIzquierdaCerrada());
+            dibujarPuertaOficina(ventana, false, jugador.esPuertaDerechaCerrada());
 
             // Renderizar personajes en las puertas si tienen luz encendida
             if (jugador.esLuzIzquierdaEncendida()) {
                 ventana.draw(marcoLuzIzquierda);
-                if (gobo.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, gobo.getNombre(), true);
-                if (usher.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, usher.getNombre(), true);
-                if (stub.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, stub.getNombre(), true);
+                if (!jugador.esPuertaIzquierdaCerrada()) {
+                    if (gobo.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, gobo.getNombre(), true);
+                    if (usher.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, usher.getNombre(), true);
+                    if (stub.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, stub.getNombre(), true);
+                }
             }
             
             if (jugador.esLuzDerechaEncendida()) {
                 ventana.draw(marcoLuzDerecha);
-                if (director.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, director.getNombre(), false);
-                if (popy.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, popy.getNombre(), false);
+                if (!jugador.esPuertaDerechaCerrada()) {
+                    if (director.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, director.getNombre(), false);
+                    if (popy.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, popy.getNombre(), false);
+                }
             }
         }
         
@@ -1285,17 +1293,90 @@ private:
         ventana.display();
     }
 
+    void dibujarPuertaOficina(sf::RenderWindow& ventana, bool esIzquierda, bool cerrada) {
+        sf::FloatRect zona = esIzquierda
+            ? visualPuertaIzquierda.getGlobalBounds()
+            : visualPuertaDerecha.getGlobalBounds();
+
+        float x = zona.position.x;
+        float y = zona.position.y;
+        float w = zona.size.x;
+        float h = zona.size.y;
+
+        sf::RectangleShape hueco({w, h});
+        hueco.setPosition({x, y});
+        hueco.setFillColor(sf::Color(10, 12, 16, 235));
+        hueco.setOutlineThickness(0.0f);
+        ventana.draw(hueco);
+
+        sf::IntRect recorte = esIzquierda
+            ? sf::IntRect(sf::Vector2i(0, 184), sf::Vector2i(222, 430))
+            : sf::IntRect(sf::Vector2i(1360, 116), sf::Vector2i(187, 462));
+
+        sf::Sprite puerta(texturaOficina);
+        puerta.setTextureRect(recorte);
+
+        float altoObjetivo = h - 60.0f;
+        float anchoObjetivo = altoObjetivo * static_cast<float>(recorte.size.x) /
+                              static_cast<float>(recorte.size.y);
+        if (anchoObjetivo > w - 32.0f) {
+            anchoObjetivo = w - 32.0f;
+            altoObjetivo = anchoObjetivo * static_cast<float>(recorte.size.y) /
+                           static_cast<float>(recorte.size.x);
+        }
+
+        puerta.setScale({
+            anchoObjetivo / static_cast<float>(recorte.size.x),
+            altoObjetivo / static_cast<float>(recorte.size.y)
+        });
+
+        float puertaX = x + (w - anchoObjetivo) / 2.0f;
+        float puertaY = y + (h - altoObjetivo) / 2.0f;
+        float desplazamientoAbierta = anchoObjetivo * 0.82f;
+        if (!cerrada) {
+            puertaX += esIzquierda ? -desplazamientoAbierta : desplazamientoAbierta;
+        }
+        puerta.setPosition({puertaX, puertaY});
+        ventana.draw(puerta);
+
+        sf::RectangleShape marcoExterior({w - 14.0f, h});
+        marcoExterior.setPosition({x + 7.0f, y});
+        marcoExterior.setFillColor(sf::Color::Transparent);
+        marcoExterior.setOutlineColor(sf::Color(48, 52, 58, 210));
+        marcoExterior.setOutlineThickness(6.0f);
+        ventana.draw(marcoExterior);
+
+        sf::RectangleShape boton({32.0f, 56.0f});
+        boton.setPosition({
+            esIzquierda ? x + w - 56.0f : x + 24.0f,
+            y + 318.0f
+        });
+        boton.setFillColor(sf::Color(16, 18, 20, 238));
+        boton.setOutlineColor(sf::Color(115, 118, 122, 230));
+        boton.setOutlineThickness(2.0f);
+        ventana.draw(boton);
+
+        sf::RectangleShape luzBoton({18.0f, 18.0f});
+        luzBoton.setPosition({
+            boton.getPosition().x + 7.0f,
+            boton.getPosition().y + 8.0f
+        });
+        luzBoton.setFillColor(cerrada ? sf::Color(220, 48, 36, 245) : sf::Color(58, 210, 86, 245));
+        ventana.draw(luzBoton);
+    }
+
     void renderizarPersonajeEnPuerta(sf::RenderWindow& ventana, const std::string& nombre, bool esIzquierda) {
         static const std::vector<std::string> permitidos = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
-        if (std::find(permitidos.begin(), permitidos.end(), nombre) == permitidos.end()) return;
+        std::string clave = getClavePersonajePuerta(nombre);
+        if (std::find(permitidos.begin(), permitidos.end(), clave) == permitidos.end()) return;
 
-        if (spritesPersonajesPuerta.find(nombre) != spritesPersonajesPuerta.end()) {
-            sf::Sprite sprite = spritesPersonajesPuerta.at(nombre);
+        if (spritesPersonajesPuerta.find(clave) != spritesPersonajesPuerta.end()) {
+            sf::Sprite sprite = spritesPersonajesPuerta.at(clave);
             
             if (esIzquierda) {
-                sprite.setPosition(sf::Vector2f(50.0f, 200.0f));
+                sprite.setPosition(sf::Vector2f(160.0f, 650.0f));
             } else {
-                sprite.setPosition(sf::Vector2f(anchoVirtualOficina - 150.0f, 200.0f));
+                sprite.setPosition(sf::Vector2f(anchoVirtualOficina - 160.0f, 650.0f));
             }
             
             ventana.draw(sprite);
@@ -1467,17 +1548,17 @@ public:
         }
 
         // Coordenadas fijas de las puertas en los extremos del mapa virtual
-        visualPuertaIzquierda.setSize(sf::Vector2f(240.0f, 720.0f));
-        visualPuertaIzquierda.setFillColor(sf::Color(30, 30, 35, 240)); 
+        visualPuertaIzquierda.setSize(sf::Vector2f(360.0f, 720.0f));
+        visualPuertaIzquierda.setFillColor(sf::Color::Transparent); 
         visualPuertaIzquierda.setOutlineColor(sf::Color(80, 80, 80));
         visualPuertaIzquierda.setOutlineThickness(3.0f);
         visualPuertaIzquierda.setPosition(sf::Vector2f(0.0f, 0.0f)); // Extremo izquierdo absoluto
 
-        visualPuertaDerecha.setSize(sf::Vector2f(240.0f, 720.0f));
-        visualPuertaDerecha.setFillColor(sf::Color(30, 30, 35, 240));
+        visualPuertaDerecha.setSize(sf::Vector2f(360.0f, 720.0f));
+        visualPuertaDerecha.setFillColor(sf::Color::Transparent);
         visualPuertaDerecha.setOutlineColor(sf::Color(80, 80, 80));
         visualPuertaDerecha.setOutlineThickness(3.0f);
-        visualPuertaDerecha.setPosition(sf::Vector2f(anchoVirtualOficina - 240.0f, 0.0f)); // Extremo derecho absoluto
+        visualPuertaDerecha.setPosition(sf::Vector2f(anchoVirtualOficina - 360.0f, 0.0f)); // Extremo derecho absoluto
 
         // Configuración de marcos de luz de pasillo
         marcoLuzIzquierda.setSize(sf::Vector2f(220.0f, 400.0f));
