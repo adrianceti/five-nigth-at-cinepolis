@@ -709,6 +709,27 @@ private:
                 continue;
             }
 
+            if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
+                if (click->button == sf::Mouse::Button::Left &&
+                    estadoJuego == EstadoJuego::Jugando &&
+                    !jugador.esMonitorAbierto() &&
+                    !controlesBloqueados) {
+                    sf::Vector2f mundo = ventana.mapPixelToCoords(click->position, vistaOficina);
+
+                    if (visualPuertaIzquierda.getGlobalBounds().contains(mundo)) {
+                        jugador.alternarPuertaIzquierda();
+                        reproducirSonido("puerta", 34.0f);
+                        continue;
+                    }
+
+                    if (visualPuertaDerecha.getGlobalBounds().contains(mundo)) {
+                        jugador.alternarPuertaDerecha();
+                        reproducirSonido("puerta", 34.0f);
+                        continue;
+                    }
+                }
+            }
+
             if (const auto* botonPresionado = evento->getIf<sf::Event::KeyPressed>()) {
                 if (estadoJuego == EstadoJuego::GameOver) {
                     if (botonPresionado->code == sf::Keyboard::Key::R) {
