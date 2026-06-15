@@ -810,7 +810,7 @@ private:
 
         sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
         sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
-        sf::FloatRect botonJugar({35.0f, 425.0f}, {490.0f, 110.0f});
+        sf::FloatRect botonJugar({40.0f, 355.0f}, {475.0f, 105.0f});
         return botonJugar.contains(posicionTextura);
     }
 
@@ -821,8 +821,19 @@ private:
 
         sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
         sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
-        sf::FloatRect botonCreditos({35.0f, 555.0f}, {490.0f, 105.0f});
+        sf::FloatRect botonCreditos({40.0f, 475.0f}, {475.0f, 100.0f});
         return botonCreditos.contains(posicionTextura);
+    }
+
+    bool clicEnSalirMenu(sf::Vector2i posicionClick) const {
+        if (!spriteMenuPrincipal.has_value()) {
+            return false;
+        }
+
+        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
+        sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
+        sf::FloatRect botonSalir({40.0f, 590.0f}, {475.0f, 105.0f});
+        return botonSalir.contains(posicionTextura);
     }
 
     void iniciarPartidaDesdeMenu() {
@@ -895,6 +906,8 @@ private:
                         iniciarPartidaDesdeMenu();
                     } else if (click->button == sf::Mouse::Button::Left && clicEnCreditos(click->position)) {
                         estadoJuego = EstadoJuego::Creditos;
+                    } else if (click->button == sf::Mouse::Button::Left && clicEnSalirMenu(click->position)) {
+                        ventana.close();
                     }
                 } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
                     if (tecla->code == sf::Keyboard::Key::Enter ||
@@ -1833,6 +1846,8 @@ public:
         }
 
         if (!cargarTextureDesdeRutas(texturaMenuPrincipal, {
+            "assets/textures/menuprincipal/menuprincipal .png",
+            "../assets/textures/menuprincipal/menuprincipal .png",
             "assets/textures/menuprincipal/menuprincipal.png",
             "../assets/textures/menuprincipal/menuprincipal.png"
         })) {
