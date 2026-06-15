@@ -861,6 +861,9 @@ private:
     }
 
     void iniciarTransicionSala3() {
+        if (sonidoMenuPrincipal.has_value()) {
+            sonidoMenuPrincipal->stop();
+        }
         estadoJuego = EstadoJuego::TransicionSala3;
         relojTransicionSala3.restart();
         reproducirSonido("golpe_puerta", 82.0f);
@@ -1084,6 +1087,9 @@ private:
                     if (click->button == sf::Mouse::Button::Left && clicEnJugar(click->position)) {
                         iniciarTransicionSala3();
                     } else if (click->button == sf::Mouse::Button::Left && clicEnCreditos(click->position)) {
+                        if (sonidoMenuPrincipal.has_value()) {
+                            sonidoMenuPrincipal->stop();
+                        }
                         estadoJuego = EstadoJuego::Creditos;
                     } else if (click->button == sf::Mouse::Button::Left && clicEnSalirMenu(click->position)) {
                         ventana.close();
@@ -1207,10 +1213,16 @@ private:
         }
 
         if (estadoJuego == EstadoJuego::Portada ||
-            estadoJuego == EstadoJuego::MenuPrincipal ||
-            estadoJuego == EstadoJuego::Creditos) {
+            estadoJuego == EstadoJuego::MenuPrincipal) {
             if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
                 sonidoMenuPrincipal->play();
+            }
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::Creditos) {
+            if (sonidoMenuPrincipal.has_value()) {
+                sonidoMenuPrincipal->stop();
             }
             return;
         }
@@ -2133,6 +2145,10 @@ public:
 
 
         if (cargarBufferAudio("menuambiente", {
+            "assets/audio/menu_principal.ogg",
+            "../assets/audio/menu_principal.ogg",
+            "assets/audio/menu_principal.wav",
+            "../assets/audio/menu_principal.wav",
             "assets/textures/musica/audio_juego/ambiente_tenebroso.wav",
             "../assets/textures/musica/audio_juego/ambiente_tenebroso.wav"
         })) {
