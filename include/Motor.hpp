@@ -19,6 +19,7 @@
 enum class EstadoJuego {
     Portada,
     MenuPrincipal,
+    TransicionSala3,
     Creditos,
     Jugando,
     AtaquePendiente,
@@ -89,6 +90,8 @@ private:
     sf::Clock relojInterferenciaMonitor;
     sf::Clock relojParpadeoInterferencia;
     sf::Clock relojTickIA;
+    sf::Clock relojTransicionSala3;
+    sf::Clock relojEfectosMenu;
     float tiempoLuzIzquierdaActiva;
     float tiempoLuzDerechaActiva;
 
@@ -857,6 +860,182 @@ private:
         controlesBloqueados = false;
     }
 
+    void iniciarTransicionSala3() {
+        estadoJuego = EstadoJuego::TransicionSala3;
+        relojTransicionSala3.restart();
+        reproducirSonido("golpe_puerta", 82.0f);
+    }
+
+    void dibujarZonaOscuraTransformada(const sf::Transform& transformacion, sf::FloatRect zona, sf::Color color) {
+        sf::ConvexShape forma(4);
+        forma.setPoint(0, transformacion.transformPoint(zona.position));
+        forma.setPoint(1, transformacion.transformPoint({zona.position.x + zona.size.x, zona.position.y}));
+        forma.setPoint(2, transformacion.transformPoint({zona.position.x + zona.size.x, zona.position.y + zona.size.y}));
+        forma.setPoint(3, transformacion.transformPoint({zona.position.x, zona.position.y + zona.size.y}));
+        forma.setFillColor(color);
+        ventana.draw(forma);
+    }
+
+    void dibujarSegmentoCadena(sf::Vector2f inicio, sf::Vector2f fin, float escala, float alpha) {
+        sf::Vector2f diferencia = fin - inicio;
+        float longitud = std::sqrt(diferencia.x * diferencia.x + diferencia.y * diferencia.y);
+        int cantidad = std::max(2, static_cast<int>(longitud / std::max(10.0f, 18.0f * escala)));
+        float angulo = std::atan2(diferencia.y, diferencia.x) * 180.0f / 3.14159265f;
+
+        for (int i = 0; i <= cantidad; ++i) {
+            float avance = static_cast<float>(i) / static_cast<float>(cantidad);
+            sf::Vector2f posicion = inicio + diferencia * avance;
+            sf::RectangleShape eslabon({15.0f * escala, 7.0f * escala});
+            eslabon.setOrigin({7.5f * escala, 3.5f * escala});
+            eslabon.setPosition(posicion);
+            eslabon.setRotation(sf::degrees(angulo + (i % 2 == 0 ? 0.0f : 90.0f)));
+            eslabon.setFillColor(sf::Color(23, 22, 20, static_cast<std::uint8_t>(alpha)));
+            eslabon.setOutlineColor(sf::Color(92, 88, 78, static_cast<std::uint8_t>(alpha)));
+            eslabon.setOutlineThickness(std::max(1.0f, 1.3f * escala));
+            ventana.draw(eslabon);
+        }
+    }
+
+    void dibujarEfectosTenebrososMenu(const sf::Transform& transformacion, float escala, float tiempo, float intensidad) {
+        float ciclo = std::fmod(tiempo, 5.7f);
+        bool ojosEncendidos = !(ciclo > 1.25f && ciclo < 1.48f) &&
+                              !(ciclo > 1.62f && ciclo < 2.05f) &&
+                              !(ciclo > 4.35f && ciclo < 4.92f);
+        float pulso = ojosEncendidos
+            ? 0.72f + std::sin(tiempo * 5.8f) * 0.18f + std::sin(tiempo * 13.1f) * 0.10f
+            : 0.0f;
+
+        for (const sf::Vector2f ojoTextura : {sf::Vector2f(944.0f, 382.0f), sf::Vector2f(991.0f, 382.0f)}) {
+            sf::Vector2f ojo = transformacion.transformPoint(ojoTextura);
+            if (!ojosEncendidos) {
+                sf::CircleShape apagado(12.0f * escala);
+                apagado.setOrigin({12.0f * escala, 12.0f * escala});
+                apagado.setScale({0.72f, 1.0f});
+                apagado.setPosition(ojo);
+                apagado.setFillColor(sf::Color(12, 1, 1, 235));
+                ventana.draw(apagado);
+                continue;
+            }
+
+            sf::CircleShape halo(30.0f * escala);
+            halo.setOrigin({30.0f * escala, 30.0f * escala});
+            halo.setScale({0.8f, 1.0f});
+            halo.setPosition(ojo);
+            halo.setFillColor(sf::Color(215, 0, 0, static_cast<std::uint8_t>(42.0f * pulso * intensidad)));
+            ventana.draw(halo);
+
+            sf::CircleShape brillo(8.0f * escala);
+            brillo.setOrigin({8.0f * escala, 8.0f * escala});
+            brillo.setPosition(ojo);
+            brillo.setFillColor(sf::Color(255, 32, 20, static_cast<std::uint8_t>(170.0f * pulso * intensidad)));
+            ventana.draw(brillo);
+        }
+
+        float falla = 0.0f;
+        if ((ciclo > 1.22f && ciclo < 1.52f) ||
+            (ciclo > 3.08f && ciclo < 3.18f) ||
+            (ciclo > 4.32f && ciclo < 4.95f)) {
+            falla = 1.0f;
+        } else {
+            falla = 0.18f + 0.08f * std::sin(tiempo * 2.3f);
+        }
+
+        sf::RectangleShape oscuridad({1280.0f, 720.0f});
+        oscuridad.setFillColor(sf::Color(0, 3, 8, static_cast<std::uint8_t>((24.0f + falla * 72.0f) * intensidad)));
+        ventana.draw(oscuridad);
+
+        float destello = std::max(0.0f, std::sin(tiempo * 17.0f) - 0.94f) / 0.06f;
+        if (destello > 0.0f && falla < 0.9f) {
+            sf::RectangleShape luzFria({1280.0f, 720.0f});
+            luzFria.setFillColor(sf::Color(28, 48, 62, static_cast<std::uint8_t>(16.0f * destello * intensidad)));
+            ventana.draw(luzFria);
+        }
+    }
+
+    void renderizarTransicionSala3() {
+        ventana.clear(sf::Color::Black);
+        ventana.setView(vistaInterfaz);
+
+        if (!spriteMenuPrincipal.has_value()) {
+            iniciarPartidaDesdeMenu();
+            ventana.display();
+            return;
+        }
+
+        float tiempo = relojTransicionSala3.getElapsedTime().asSeconds();
+        float progreso = std::clamp(tiempo / 2.75f, 0.0f, 1.0f);
+        float progresoZoom = std::clamp((tiempo - 0.62f) / 1.88f, 0.0f, 1.0f);
+        progresoZoom = progresoZoom * progresoZoom * (3.0f - 2.0f * progresoZoom);
+        float progresoRuptura = std::clamp((tiempo - 0.16f) / 1.05f, 0.0f, 1.0f);
+        progresoRuptura = 1.0f - std::pow(1.0f - progresoRuptura, 3.0f);
+
+        sf::Sprite escena(texturaMenuPrincipal);
+        sf::Vector2f escalaBase = spriteMenuPrincipal->getScale();
+        sf::Vector2f posicionBase = spriteMenuPrincipal->getPosition();
+        float aumento = 1.0f + 2.25f * progresoZoom;
+        sf::Vector2f escalaActual = escalaBase * aumento;
+        sf::Vector2f objetivoTextura(1480.0f, 425.0f);
+        sf::Vector2f posicionObjetivo(
+            640.0f - objetivoTextura.x * escalaActual.x,
+            360.0f - objetivoTextura.y * escalaActual.y
+        );
+        sf::Vector2f posicionActual = posicionBase + (posicionObjetivo - posicionBase) * progresoZoom;
+
+        float sacudida = std::max(0.0f, 1.0f - tiempo / 0.28f);
+        posicionActual.x += std::sin(tiempo * 76.0f) * 4.0f * sacudida;
+        posicionActual.y += std::cos(tiempo * 61.0f) * 2.5f * sacudida;
+        escena.setScale(escalaActual);
+        escena.setPosition(posicionActual);
+        ventana.draw(escena);
+
+        const sf::Transform transformacion = escena.getTransform();
+        dibujarZonaOscuraTransformada(transformacion, {{1280.0f, 392.0f}, {392.0f, 80.0f}}, sf::Color(3, 4, 5, 225));
+        dibujarZonaOscuraTransformada(transformacion, {{1395.0f, 478.0f}, {277.0f, 185.0f}}, sf::Color(4, 5, 6, 238));
+
+        sf::Vector2f anclaIzquierda = transformacion.transformPoint({1215.0f, 385.0f});
+        sf::Vector2f anclaDerecha = transformacion.transformPoint({1665.0f, 405.0f});
+        sf::Vector2f centro = transformacion.transformPoint({1445.0f, 418.0f});
+        float caida = progresoRuptura * 76.0f * escalaActual.y;
+        sf::Vector2f extremoIzquierdo = centro + sf::Vector2f(-18.0f * escalaActual.x, caida);
+        sf::Vector2f extremoDerecho = centro + sf::Vector2f(22.0f * escalaActual.x, caida * 0.82f);
+        dibujarSegmentoCadena(anclaIzquierda, extremoIzquierdo, escalaActual.x, 245.0f);
+        dibujarSegmentoCadena(anclaDerecha, extremoDerecho, escalaActual.x, 245.0f);
+
+        float balanceo = std::sin((tiempo - 0.12f) * 5.2f) * 8.5f * std::exp(-tiempo * 0.62f);
+        sf::Vector2f anclaLetrero = transformacion.transformPoint({1533.0f, 486.0f});
+        sf::Sprite letrero(texturaMenuPrincipal);
+        letrero.setTextureRect(sf::IntRect(sf::Vector2i(1398, 477), sf::Vector2i(274, 188)));
+        letrero.setOrigin({137.0f, 9.0f});
+        letrero.setScale(escalaActual);
+        letrero.setPosition(anclaLetrero + sf::Vector2f(0.0f, caida * 0.38f));
+        letrero.setRotation(sf::degrees(balanceo));
+        ventana.draw(letrero);
+
+        if (tiempo < 0.32f) {
+            float intensidad = 1.0f - tiempo / 0.32f;
+            sf::Vector2f puntoRuptura = transformacion.transformPoint({1445.0f, 418.0f});
+            for (int i = 0; i < 5; ++i) {
+                float angulo = static_cast<float>(i) * 1.31f + tiempo * 5.0f;
+                float distancia = (12.0f + i * 4.0f) * escalaActual.x;
+                sf::CircleShape chispa(std::max(1.0f, 1.7f * escalaActual.x));
+                chispa.setPosition(puntoRuptura + sf::Vector2f(std::cos(angulo), std::sin(angulo)) * distancia);
+                chispa.setFillColor(sf::Color(220, 175, 92, static_cast<std::uint8_t>(150.0f * intensidad)));
+                ventana.draw(chispa);
+            }
+        }
+
+        dibujarEfectosTenebrososMenu(transformacion, escalaActual.x, tiempo + 1.2f, 1.0f);
+
+        if (progreso > 0.82f) {
+            float alpha = std::clamp((progreso - 0.82f) / 0.18f, 0.0f, 1.0f);
+            sf::RectangleShape fundido({1280.0f, 720.0f});
+            fundido.setFillColor(sf::Color(0, 0, 0, static_cast<std::uint8_t>(255.0f * alpha)));
+            ventana.draw(fundido);
+        }
+
+        ventana.display();
+    }
+
     bool clicEnBotonPuerta(sf::Vector2i posicionClick, bool esIzquierda) const {
         sf::FloatRect zona = esIzquierda
             ? visualPuertaIzquierda.getGlobalBounds()
@@ -903,7 +1082,7 @@ private:
             if (estadoJuego == EstadoJuego::MenuPrincipal) {
                 if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
                     if (click->button == sf::Mouse::Button::Left && clicEnJugar(click->position)) {
-                        iniciarPartidaDesdeMenu();
+                        iniciarTransicionSala3();
                     } else if (click->button == sf::Mouse::Button::Left && clicEnCreditos(click->position)) {
                         estadoJuego = EstadoJuego::Creditos;
                     } else if (click->button == sf::Mouse::Button::Left && clicEnSalirMenu(click->position)) {
@@ -912,9 +1091,13 @@ private:
                 } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
                     if (tecla->code == sf::Keyboard::Key::Enter ||
                         tecla->code == sf::Keyboard::Key::Space) {
-                        iniciarPartidaDesdeMenu();
+                        iniciarTransicionSala3();
                     }
                 }
+                continue;
+            }
+
+            if (estadoJuego == EstadoJuego::TransicionSala3) {
                 continue;
             }
 
@@ -1028,6 +1211,13 @@ private:
             estadoJuego == EstadoJuego::Creditos) {
             if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
                 sonidoMenuPrincipal->play();
+            }
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::TransicionSala3) {
+            if (relojTransicionSala3.getElapsedTime().asSeconds() >= 2.75f) {
+                iniciarPartidaDesdeMenu();
             }
             return;
         }
@@ -1450,8 +1640,19 @@ private:
             ventana.setView(vistaInterfaz);
             if (spriteMenuPrincipal.has_value()) {
                 ventana.draw(spriteMenuPrincipal.value());
+                dibujarEfectosTenebrososMenu(
+                    spriteMenuPrincipal->getTransform(),
+                    spriteMenuPrincipal->getScale().x,
+                    relojEfectosMenu.getElapsedTime().asSeconds(),
+                    1.0f
+                );
             }
             ventana.display();
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::TransicionSala3) {
+            renderizarTransicionSala3();
             return;
         }
 
@@ -1758,6 +1959,8 @@ public:
               relojVictoria(),
               relojInterferenciaMonitor(),
               relojParpadeoInterferencia(),
+              relojTransicionSala3(),
+              relojEfectosMenu(),
               relojNoche(),
               tiempoLuzIzquierdaActiva(0.0f),
               tiempoLuzDerechaActiva(0.0f),
