@@ -19,6 +19,7 @@
 enum class EstadoJuego {
     Portada,
     MenuPrincipal,
+    Creditos,
     Jugando,
     AtaquePendiente,
     Jumpscare,
@@ -40,6 +41,8 @@ private:
     std::optional<sf::Sprite> spritePortada;
     sf::Texture texturaMenuPrincipal;
     std::optional<sf::Sprite> spriteMenuPrincipal;
+    sf::Texture texturaCreditos;
+    std::optional<sf::Sprite> spriteCreditos;
     sf::Font fuenteUI;
     bool fuenteUICargada;
 
@@ -789,6 +792,17 @@ private:
         return botonJugar.contains(posicionTextura);
     }
 
+    bool clicEnCreditos(sf::Vector2i posicionClick) const {
+        if (!spriteMenuPrincipal.has_value()) {
+            return false;
+        }
+
+        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
+        sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
+        sf::FloatRect botonCreditos({35.0f, 555.0f}, {490.0f, 105.0f});
+        return botonCreditos.contains(posicionTextura);
+    }
+
     void iniciarPartidaDesdeMenu() {
         if (sonidoMenuPrincipal.has_value()) {
             sonidoMenuPrincipal->stop();
@@ -857,11 +871,22 @@ private:
                 if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
                     if (click->button == sf::Mouse::Button::Left && clicEnJugar(click->position)) {
                         iniciarPartidaDesdeMenu();
+                    } else if (click->button == sf::Mouse::Button::Left && clicEnCreditos(click->position)) {
+                        estadoJuego = EstadoJuego::Creditos;
                     }
                 } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
                     if (tecla->code == sf::Keyboard::Key::Enter ||
                         tecla->code == sf::Keyboard::Key::Space) {
                         iniciarPartidaDesdeMenu();
+                    }
+                }
+                continue;
+            }
+
+            if (estadoJuego == EstadoJuego::Creditos) {
+                if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
+                    if (tecla->code == sf::Keyboard::Key::Escape) {
+                        estadoJuego = EstadoJuego::MenuPrincipal;
                     }
                 }
                 continue;
@@ -957,7 +982,9 @@ private:
             }
         }
 
-        if (estadoJuego == EstadoJuego::Portada || estadoJuego == EstadoJuego::MenuPrincipal) {
+        if (estadoJuego == EstadoJuego::Portada ||
+            estadoJuego == EstadoJuego::MenuPrincipal ||
+            estadoJuego == EstadoJuego::Creditos) {
             if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
                 sonidoMenuPrincipal->play();
             }
@@ -1367,6 +1394,16 @@ private:
             return;
         }
 
+        if (estadoJuego == EstadoJuego::Creditos) {
+            ventana.clear(sf::Color::Black);
+            ventana.setView(vistaInterfaz);
+            if (spriteCreditos.has_value()) {
+                ventana.draw(spriteCreditos.value());
+            }
+            ventana.display();
+            return;
+        }
+
         if (estadoJuego == EstadoJuego::Victoria) {
             renderizarVictoria();
             return;
@@ -1759,6 +1796,25 @@ public:
             float escala = std::max(escalaX, escalaY);
             spriteMenuPrincipal->setScale({escala, escala});
             spriteMenuPrincipal->setPosition({
+                (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
+                (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
+            });
+        }
+
+        if (!cargarTextureDesdeRutas(texturaCreditos, {
+            "assets/textures/menuprincipal/creditos.png",
+            "../assets/textures/menuprincipal/creditos.png"
+        })) {
+            std::cerr << "Advertencia: No se encontró textura de créditos" << std::endl;
+        } else {
+            spriteCreditos.emplace(texturaCreditos);
+
+            const auto tamTextura = texturaCreditos.getSize();
+            float escalaX = 1280.0f / static_cast<float>(tamTextura.x);
+            float escalaY = 720.0f / static_cast<float>(tamTextura.y);
+            float escala = std::max(escalaX, escalaY);
+            spriteCreditos->setScale({escala, escala});
+            spriteCreditos->setPosition({
                 (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
                 (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
             });
