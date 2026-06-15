@@ -17,6 +17,7 @@
 #include "Personaje.hpp"
 
 enum class EstadoJuego {
+    Portada,
     MenuPrincipal,
     Jugando,
     AtaquePendiente,
@@ -35,6 +36,8 @@ private:
     sf::Texture texturaPasilloDerecha;
     bool pasilloIzquierdoCargado;
     bool pasilloDerechoCargado;
+    sf::Texture texturaPortada;
+    std::optional<sf::Sprite> spritePortada;
     sf::Texture texturaMenuPrincipal;
     std::optional<sf::Sprite> spriteMenuPrincipal;
     sf::Font fuenteUI;
@@ -775,6 +778,17 @@ private:
         return nombre;
     }
 
+    bool clicEnJugar(sf::Vector2i posicionClick) const {
+        if (!spriteMenuPrincipal.has_value()) {
+            return false;
+        }
+
+        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
+        sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
+        sf::FloatRect botonJugar({35.0f, 425.0f}, {490.0f, 110.0f});
+        return botonJugar.contains(posicionTextura);
+    }
+
     void iniciarPartidaDesdeMenu() {
         if (sonidoMenuPrincipal.has_value()) {
             sonidoMenuPrincipal->stop();
@@ -825,9 +839,23 @@ private:
                 continue;
             }
 
-            if (estadoJuego == EstadoJuego::MenuPrincipal) {
+            if (estadoJuego == EstadoJuego::Portada) {
                 if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
                     if (click->button == sf::Mouse::Button::Left) {
+                        estadoJuego = EstadoJuego::MenuPrincipal;
+                    }
+                } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
+                    if (tecla->code == sf::Keyboard::Key::Enter ||
+                        tecla->code == sf::Keyboard::Key::Space) {
+                        estadoJuego = EstadoJuego::MenuPrincipal;
+                    }
+                }
+                continue;
+            }
+
+            if (estadoJuego == EstadoJuego::MenuPrincipal) {
+                if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
+                    if (click->button == sf::Mouse::Button::Left && clicEnJugar(click->position)) {
                         iniciarPartidaDesdeMenu();
                     }
                 } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
@@ -917,16 +945,19 @@ private:
 
     void actualizar() {
 
-        if (estadoJuego == EstadoJuego::MenuPrincipal) {
+        if (estadoJuego == EstadoJuego::Portada) {
             sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
             bool mouseDentro = posicionMouse.x >= 0 &&
                                posicionMouse.x < static_cast<int>(ventana.getSize().x) &&
                                posicionMouse.y >= 0 &&
                                posicionMouse.y < static_cast<int>(ventana.getSize().y);
             if (mouseDentro && sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-                iniciarPartidaDesdeMenu();
+                estadoJuego = EstadoJuego::MenuPrincipal;
                 return;
             }
+        }
+
+        if (estadoJuego == EstadoJuego::Portada || estadoJuego == EstadoJuego::MenuPrincipal) {
             if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
                 sonidoMenuPrincipal->play();
             }
@@ -1316,6 +1347,16 @@ private:
 
     void renderizar() {
 
+        if (estadoJuego == EstadoJuego::Portada) {
+            ventana.clear(sf::Color::Black);
+            ventana.setView(vistaInterfaz);
+            if (spritePortada.has_value()) {
+                ventana.draw(spritePortada.value());
+            }
+            ventana.display();
+            return;
+        }
+
         if (estadoJuego == EstadoJuego::MenuPrincipal) {
             ventana.clear(sf::Color::Black);
             ventana.setView(vistaInterfaz);
@@ -1622,7 +1663,7 @@ public:
               relojNoche(),
               tiempoLuzIzquierdaActiva(0.0f),
               tiempoLuzDerechaActiva(0.0f),
-              estadoJuego(EstadoJuego::MenuPrincipal),
+              estadoJuego(EstadoJuego::Portada),
               nocheActual(1),
               horaActual(12),
               tiempoPorHora(86.0f),
@@ -1684,6 +1725,25 @@ public:
         vistaInterfaz.setSize({1280.0f, 720.0f});
         vistaInterfaz.setCenter({640.0f, 360.0f});
 
+
+        if (!cargarTextureDesdeRutas(texturaPortada, {
+            "assets/textures/menuprincipal/portadaprincipal/portada.png",
+            "../assets/textures/menuprincipal/portadaprincipal/portada.png"
+        })) {
+            std::cerr << "Advertencia: No se encontró textura de portada" << std::endl;
+        } else {
+            spritePortada.emplace(texturaPortada);
+
+            const auto tamTextura = texturaPortada.getSize();
+            float escalaX = 1280.0f / static_cast<float>(tamTextura.x);
+            float escalaY = 720.0f / static_cast<float>(tamTextura.y);
+            float escala = std::max(escalaX, escalaY);
+            spritePortada->setScale({escala, escala});
+            spritePortada->setPosition({
+                (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
+                (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
+            });
+        }
 
         if (!cargarTextureDesdeRutas(texturaMenuPrincipal, {
             "assets/textures/menuprincipal/menuprincipal.png",
