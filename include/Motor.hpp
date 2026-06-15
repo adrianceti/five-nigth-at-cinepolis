@@ -20,8 +20,10 @@ enum class EstadoJuego {
     Portada,
     MenuPrincipal,
     TransicionSala3,
+    Instrucciones,
     Creditos,
     Jugando,
+    Pausa,
     AtaquePendiente,
     Jumpscare,
     GameOver,
@@ -44,6 +46,8 @@ private:
     std::optional<sf::Sprite> spriteMenuPrincipal;
     sf::Texture texturaCreditos;
     std::optional<sf::Sprite> spriteCreditos;
+    sf::Texture texturaMenuPausa;
+    std::optional<sf::Sprite> spriteMenuPausa;
     sf::Font fuenteUI;
     bool fuenteUICargada;
 
@@ -124,6 +128,7 @@ private:
     bool introNoche1Activa;
     float duracionIntroNoche1;
     float duracionVictoria;
+    float tiempoIntroAntesPausa;
 
     bool cargarTextureDesdeRutas(sf::Texture& textura, const std::vector<std::string>& rutas) {
         for (const auto& ruta : rutas) {
@@ -382,6 +387,7 @@ private:
         sonidoIntroNoche1->play();
         introNoche1Reproducido = true;
         introNoche1Activa = true;
+        tiempoIntroAntesPausa = 0.0f;
         relojIntroNoche1.restart();
     }
 
@@ -721,6 +727,7 @@ private:
 
         introNoche1Reproducido = false;
         introNoche1Activa = false;
+        tiempoIntroAntesPausa = 0.0f;
     }
 
     void volverAlMenuPrincipal() {
@@ -737,6 +744,77 @@ private:
         if (sonidoMenuPrincipal.has_value()) {
             sonidoMenuPrincipal->play();
         }
+    }
+
+    void pausarPartida() {
+        if (estadoJuego != EstadoJuego::Jugando) {
+            return;
+        }
+
+        estadoJuego = EstadoJuego::Pausa;
+        tiempoIntroAntesPausa += relojIntroNoche1.getElapsedTime().asSeconds();
+
+        if (sonidoIntroNoche1.has_value() &&
+            sonidoIntroNoche1->getStatus() == sf::SoundSource::Status::Playing) {
+            sonidoIntroNoche1->pause();
+        }
+        if (sonidoAmbiente.has_value() &&
+            sonidoAmbiente->getStatus() == sf::SoundSource::Status::Playing) {
+            sonidoAmbiente->pause();
+        }
+        for (auto& sonido : sonidosActivos) {
+            if (sonido.getStatus() == sf::SoundSource::Status::Playing) {
+                sonido.pause();
+            }
+        }
+    }
+
+    void continuarPartida() {
+        if (estadoJuego != EstadoJuego::Pausa) {
+            return;
+        }
+
+        estadoJuego = EstadoJuego::Jugando;
+        relojEnergia.restart();
+        relojTerminal.restart();
+        relojTickIA.restart();
+        relojInterferenciaMonitor.restart();
+        relojParpadeoInterferencia.restart();
+        relojIntroNoche1.restart();
+
+        if (sonidoIntroNoche1.has_value() &&
+            sonidoIntroNoche1->getStatus() == sf::SoundSource::Status::Paused) {
+            sonidoIntroNoche1->play();
+        }
+        if (sonidoAmbiente.has_value() &&
+            sonidoAmbiente->getStatus() == sf::SoundSource::Status::Paused) {
+            sonidoAmbiente->play();
+        }
+        for (auto& sonido : sonidosActivos) {
+            if (sonido.getStatus() == sf::SoundSource::Status::Paused) {
+                sonido.play();
+            }
+        }
+    }
+
+    bool clicEnBotonPausa(sf::Vector2i posicionClick, int boton) const {
+        if (!spriteMenuPausa.has_value()) {
+            return false;
+        }
+
+        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
+        sf::Vector2f posicionTextura = spriteMenuPausa->getInverseTransform().transformPoint(posicionInterfaz);
+        sf::FloatRect zona;
+
+        if (boton == 0) {
+            zona = sf::FloatRect({575.0f, 370.0f}, {540.0f, 92.0f});
+        } else if (boton == 1) {
+            zona = sf::FloatRect({575.0f, 472.0f}, {540.0f, 82.0f});
+        } else {
+            zona = sf::FloatRect({575.0f, 572.0f}, {540.0f, 82.0f});
+        }
+
+        return zona.contains(posicionTextura);
     }
 
     bool clicEnSalirGameOver(sf::Vector2i posicionClick) const {
@@ -824,8 +902,19 @@ private:
 
         sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
         sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
-        sf::FloatRect botonCreditos({40.0f, 475.0f}, {475.0f, 100.0f});
+        sf::FloatRect botonCreditos({40.0f, 550.0f}, {475.0f, 70.0f});
         return botonCreditos.contains(posicionTextura);
+    }
+
+    bool clicEnInstrucciones(sf::Vector2i posicionClick) const {
+        if (!spriteMenuPrincipal.has_value()) {
+            return false;
+        }
+
+        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
+        sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
+        sf::FloatRect botonInstrucciones({40.0f, 470.0f}, {475.0f, 70.0f});
+        return botonInstrucciones.contains(posicionTextura);
     }
 
     bool clicEnSalirMenu(sf::Vector2i posicionClick) const {
@@ -835,8 +924,128 @@ private:
 
         sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
         sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
-        sf::FloatRect botonSalir({40.0f, 590.0f}, {475.0f, 105.0f});
+        sf::FloatRect botonSalir({40.0f, 630.0f}, {475.0f, 70.0f});
         return botonSalir.contains(posicionTextura);
+    }
+
+    void dibujarBotonesAdicionalesMenu() {
+        if (!spriteMenuPrincipal.has_value()) {
+            return;
+        }
+
+        const sf::Transform transformacion = spriteMenuPrincipal->getTransform();
+        dibujarZonaOscuraTransformada(
+            transformacion,
+            {{32.0f, 465.0f}, {495.0f, 240.0f}},
+            sf::Color(1, 2, 3, 245)
+        );
+
+        const std::vector<std::pair<std::string, sf::FloatRect>> botones = {
+            {"INSTRUCCIONES", {{40.0f, 470.0f}, {475.0f, 70.0f}}},
+            {"CREDITOS", {{40.0f, 550.0f}, {475.0f, 70.0f}}},
+            {"SALIR", {{40.0f, 630.0f}, {475.0f, 70.0f}}}
+        };
+
+        for (const auto& boton : botones) {
+            sf::Vector2f inicio = transformacion.transformPoint(boton.second.position);
+            sf::Vector2f final = transformacion.transformPoint({
+                boton.second.position.x + boton.second.size.x,
+                boton.second.position.y + boton.second.size.y
+            });
+            sf::RectangleShape forma(final - inicio);
+            forma.setPosition(inicio);
+            forma.setFillColor(sf::Color(5, 7, 7, 225));
+            forma.setOutlineColor(sf::Color(108, 112, 105, 215));
+            forma.setOutlineThickness(2.0f);
+            ventana.draw(forma);
+
+            if (fuenteUICargada) {
+                sf::Text texto(fuenteUI, boton.first, 27);
+                texto.setStyle(sf::Text::Bold);
+                texto.setFillColor(sf::Color(205, 202, 188));
+                texto.setOutlineColor(sf::Color::Black);
+                texto.setOutlineThickness(2.0f);
+                sf::FloatRect limites = texto.getLocalBounds();
+                texto.setOrigin({
+                    limites.position.x + limites.size.x / 2.0f,
+                    limites.position.y + limites.size.y / 2.0f
+                });
+                texto.setPosition({
+                    inicio.x + (final.x - inicio.x) / 2.0f,
+                    inicio.y + (final.y - inicio.y) / 2.0f
+                });
+                ventana.draw(texto);
+            }
+        }
+    }
+
+    void renderizarInstrucciones() {
+        ventana.clear(sf::Color::Black);
+        ventana.setView(vistaInterfaz);
+
+        if (spriteMenuPrincipal.has_value()) {
+            ventana.draw(spriteMenuPrincipal.value());
+        }
+
+        sf::RectangleShape sombra({1280.0f, 720.0f});
+        sombra.setFillColor(sf::Color(0, 0, 0, 185));
+        ventana.draw(sombra);
+
+        sf::RectangleShape panel({760.0f, 590.0f});
+        panel.setPosition({260.0f, 65.0f});
+        panel.setFillColor(sf::Color(7, 9, 10, 245));
+        panel.setOutlineColor(sf::Color(120, 105, 76));
+        panel.setOutlineThickness(4.0f);
+        ventana.draw(panel);
+
+        if (fuenteUICargada) {
+            sf::Text titulo(fuenteUI, "INSTRUCCIONES", 50);
+            titulo.setStyle(sf::Text::Bold);
+            titulo.setFillColor(sf::Color(220, 205, 170));
+            sf::FloatRect limitesTitulo = titulo.getLocalBounds();
+            titulo.setOrigin({
+                limitesTitulo.position.x + limitesTitulo.size.x / 2.0f,
+                limitesTitulo.position.y + limitesTitulo.size.y / 2.0f
+            });
+            titulo.setPosition({640.0f, 125.0f});
+            ventana.draw(titulo);
+
+            const std::vector<std::string> lineas = {
+                "MUEVE EL RATON A LOS LADOS  -  MIRAR LA OFICINA",
+                "A / D  -  ABRIR O CERRAR PUERTAS",
+                "Q / E  -  ENCENDER LUCES",
+                "BARRA ESPACIADORA  -  ABRIR O CERRAR MONITOR",
+                "TECLAS 1 - 5  -  CAMBIAR CAMARAS",
+                "ESC  -  PAUSAR EL JUEGO",
+                "SOBREVIVE HASTA LAS 6 AM Y CUIDA LA ENERGIA"
+            };
+
+            float y = 215.0f;
+            for (const auto& linea : lineas) {
+                sf::Text texto(fuenteUI, linea, 23);
+                texto.setFillColor(sf::Color(215, 215, 205));
+                sf::FloatRect limites = texto.getLocalBounds();
+                texto.setOrigin({
+                    limites.position.x + limites.size.x / 2.0f,
+                    limites.position.y + limites.size.y / 2.0f
+                });
+                texto.setPosition({640.0f, y});
+                ventana.draw(texto);
+                y += 57.0f;
+            }
+
+            sf::Text regresar(fuenteUI, "PULSA ESC PARA REGRESAR", 19);
+            regresar.setFillColor(sf::Color(150, 160, 150));
+            sf::FloatRect limitesRegresar = regresar.getLocalBounds();
+            regresar.setOrigin({
+                limitesRegresar.position.x + limitesRegresar.size.x / 2.0f,
+                limitesRegresar.position.y + limitesRegresar.size.y / 2.0f
+            });
+            regresar.setPosition({640.0f, 615.0f});
+            ventana.draw(regresar);
+        }
+
+        ventana.display();
     }
 
     void iniciarPartidaDesdeMenu() {
@@ -853,6 +1062,7 @@ private:
         acumuladorTickIA = 0.0f;
         introNoche1Reproducido = false;
         introNoche1Activa = false;
+        tiempoIntroAntesPausa = 0.0f;
         estadoJuego = EstadoJuego::Jugando;
         relojNoche.restart();
         relojEnergia.restart();
@@ -1147,13 +1357,8 @@ private:
             }
 
             if (estadoJuego == EstadoJuego::Portada) {
-                if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
-                    if (click->button == sf::Mouse::Button::Left) {
-                        estadoJuego = EstadoJuego::MenuPrincipal;
-                    }
-                } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
-                    if (tecla->code == sf::Keyboard::Key::Enter ||
-                        tecla->code == sf::Keyboard::Key::Space) {
+                if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
+                    if (tecla->code == sf::Keyboard::Key::Space) {
                         estadoJuego = EstadoJuego::MenuPrincipal;
                     }
                 }
@@ -1164,6 +1369,11 @@ private:
                 if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
                     if (click->button == sf::Mouse::Button::Left && clicEnJugar(click->position)) {
                         iniciarTransicionSala3();
+                    } else if (click->button == sf::Mouse::Button::Left && clicEnInstrucciones(click->position)) {
+                        if (sonidoMenuPrincipal.has_value()) {
+                            sonidoMenuPrincipal->stop();
+                        }
+                        estadoJuego = EstadoJuego::Instrucciones;
                     } else if (click->button == sf::Mouse::Button::Left && clicEnCreditos(click->position)) {
                         if (sonidoMenuPrincipal.has_value()) {
                             sonidoMenuPrincipal->stop();
@@ -1185,10 +1395,36 @@ private:
                 continue;
             }
 
+            if (estadoJuego == EstadoJuego::Instrucciones) {
+                if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
+                    if (tecla->code == sf::Keyboard::Key::Escape) {
+                        estadoJuego = EstadoJuego::MenuPrincipal;
+                    }
+                }
+                continue;
+            }
+
             if (estadoJuego == EstadoJuego::Creditos) {
                 if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
                     if (tecla->code == sf::Keyboard::Key::Escape) {
                         estadoJuego = EstadoJuego::MenuPrincipal;
+                    }
+                }
+                continue;
+            }
+
+            if (estadoJuego == EstadoJuego::Pausa) {
+                if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
+                    if (click->button == sf::Mouse::Button::Left && clicEnBotonPausa(click->position, 0)) {
+                        continuarPartida();
+                    } else if (click->button == sf::Mouse::Button::Left && clicEnBotonPausa(click->position, 1)) {
+                        resetearPartida();
+                    } else if (click->button == sf::Mouse::Button::Left && clicEnBotonPausa(click->position, 2)) {
+                        volverAlMenuPrincipal();
+                    }
+                } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
+                    if (tecla->code == sf::Keyboard::Key::Escape) {
+                        continuarPartida();
                     }
                 }
                 continue;
@@ -1228,6 +1464,12 @@ private:
 
             if (const auto* botonPresionado = evento->getIf<sf::Event::KeyPressed>()) {
                 if (estadoJuego == EstadoJuego::Jumpscare || estadoJuego == EstadoJuego::Victoria) {
+                    continue;
+                }
+
+                if (botonPresionado->code == sf::Keyboard::Key::Escape &&
+                    estadoJuego == EstadoJuego::Jugando) {
+                    pausarPartida();
                     continue;
                 }
 
@@ -1278,18 +1520,6 @@ private:
 
     void actualizar() {
 
-        if (estadoJuego == EstadoJuego::Portada) {
-            sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
-            bool mouseDentro = posicionMouse.x >= 0 &&
-                               posicionMouse.x < static_cast<int>(ventana.getSize().x) &&
-                               posicionMouse.y >= 0 &&
-                               posicionMouse.y < static_cast<int>(ventana.getSize().y);
-            if (mouseDentro && sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-                estadoJuego = EstadoJuego::MenuPrincipal;
-                return;
-            }
-        }
-
         if (estadoJuego == EstadoJuego::Portada ||
             estadoJuego == EstadoJuego::MenuPrincipal) {
             if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
@@ -1302,6 +1532,17 @@ private:
             if (sonidoMenuPrincipal.has_value()) {
                 sonidoMenuPrincipal->stop();
             }
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::Instrucciones) {
+            if (sonidoMenuPrincipal.has_value()) {
+                sonidoMenuPrincipal->stop();
+            }
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::Pausa) {
             return;
         }
 
@@ -1359,7 +1600,8 @@ private:
             iniciarIntroNoche1();
         }
 
-        if (introNoche1Activa && relojIntroNoche1.getElapsedTime().asSeconds() >= duracionIntroNoche1) {
+        if (introNoche1Activa &&
+            tiempoIntroAntesPausa + relojIntroNoche1.getElapsedTime().asSeconds() >= duracionIntroNoche1) {
             introNoche1Activa = false;
             if (sonidoIntroNoche1.has_value() &&
                 sonidoIntroNoche1->getStatus() == sf::SoundSource::Status::Playing) {
@@ -1726,6 +1968,31 @@ private:
                     relojEfectosMenu.getElapsedTime().asSeconds()
                 );
             }
+            if (fuenteUICargada) {
+                float tiempo = relojEfectosMenu.getElapsedTime().asSeconds();
+                float pulso = 0.62f + 0.38f * (0.5f + 0.5f * std::sin(tiempo * 3.0f));
+
+                sf::RectangleShape fondoMensaje({500.0f, 38.0f});
+                fondoMensaje.setOrigin({250.0f, 19.0f});
+                fondoMensaje.setPosition({640.0f, 691.0f});
+                fondoMensaje.setFillColor(sf::Color(0, 0, 0, 135));
+                fondoMensaje.setOutlineColor(sf::Color(145, 155, 150, static_cast<std::uint8_t>(80.0f * pulso)));
+                fondoMensaje.setOutlineThickness(1.0f);
+                ventana.draw(fondoMensaje);
+
+                sf::Text continuar(fuenteUI, "PULSA LA BARRA ESPACIADORA PARA CONTINUAR", 16);
+                continuar.setStyle(sf::Text::Bold);
+                continuar.setFillColor(sf::Color(225, 230, 225, static_cast<std::uint8_t>(255.0f * pulso)));
+                continuar.setOutlineColor(sf::Color::Black);
+                continuar.setOutlineThickness(2.0f);
+                sf::FloatRect limites = continuar.getLocalBounds();
+                continuar.setOrigin({
+                    limites.position.x + limites.size.x / 2.0f,
+                    limites.position.y + limites.size.y / 2.0f
+                });
+                continuar.setPosition({640.0f, 690.0f});
+                ventana.draw(continuar);
+            }
             ventana.display();
             return;
         }
@@ -1741,6 +2008,7 @@ private:
                     relojEfectosMenu.getElapsedTime().asSeconds(),
                     1.0f
                 );
+                dibujarBotonesAdicionalesMenu();
             }
             ventana.display();
             return;
@@ -1748,6 +2016,21 @@ private:
 
         if (estadoJuego == EstadoJuego::TransicionSala3) {
             renderizarTransicionSala3();
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::Instrucciones) {
+            renderizarInstrucciones();
+            return;
+        }
+
+        if (estadoJuego == EstadoJuego::Pausa) {
+            ventana.clear(sf::Color::Black);
+            ventana.setView(vistaInterfaz);
+            if (spriteMenuPausa.has_value()) {
+                ventana.draw(spriteMenuPausa.value());
+            }
+            ventana.display();
             return;
         }
 
@@ -2072,7 +2355,8 @@ public:
               fotogramaInterferenciaMonitor(0),
               intervaloTickIA(5.0f),
               acumuladorTickIA(0.0f),
-              controlesBloqueados(false) {
+              controlesBloqueados(false),
+              tiempoIntroAntesPausa(0.0f) {
 
         std::srand(static_cast<unsigned int>(std::time(nullptr)));
         sf::Listener::setPosition({0.0f, 0.0f, 0.0f});
@@ -2178,6 +2462,25 @@ public:
             float escala = std::max(escalaX, escalaY);
             spriteCreditos->setScale({escala, escala});
             spriteCreditos->setPosition({
+                (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
+                (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
+            });
+        }
+
+        if (!cargarTextureDesdeRutas(texturaMenuPausa, {
+            "assets/textures/menuprincipal/menudepausa/menudepausa.png",
+            "../assets/textures/menuprincipal/menudepausa/menudepausa.png"
+        })) {
+            std::cerr << "Advertencia: No se encontró textura del menú de pausa" << std::endl;
+        } else {
+            spriteMenuPausa.emplace(texturaMenuPausa);
+
+            const auto tamTextura = texturaMenuPausa.getSize();
+            float escalaX = 1280.0f / static_cast<float>(tamTextura.x);
+            float escalaY = 720.0f / static_cast<float>(tamTextura.y);
+            float escala = std::max(escalaX, escalaY);
+            spriteMenuPausa->setScale({escala, escala});
+            spriteMenuPausa->setPosition({
                 (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
                 (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
             });
