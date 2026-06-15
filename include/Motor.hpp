@@ -720,6 +720,28 @@ private:
         introNoche1Activa = false;
     }
 
+    void volverAlMenuPrincipal() {
+        resetearPartida();
+        estadoJuego = EstadoJuego::MenuPrincipal;
+        controlesBloqueados = false;
+
+        if (sonidoAmbiente.has_value()) {
+            sonidoAmbiente->stop();
+        }
+        if (sonidoIntroNoche1.has_value()) {
+            sonidoIntroNoche1->stop();
+        }
+        if (sonidoMenuPrincipal.has_value()) {
+            sonidoMenuPrincipal->play();
+        }
+    }
+
+    bool clicEnSalirGameOver(sf::Vector2i posicionClick) const {
+        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
+        sf::FloatRect botonSalir({455.0f, 470.0f}, {370.0f, 70.0f});
+        return botonSalir.contains(posicionInterfaz);
+    }
+
     void cargarTexturasPersonajesPuerta() {
 
         std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher"};
@@ -892,6 +914,19 @@ private:
                 continue;
             }
 
+            if (estadoJuego == EstadoJuego::GameOver) {
+                if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
+                    if (click->button == sf::Mouse::Button::Left && clicEnSalirGameOver(click->position)) {
+                        volverAlMenuPrincipal();
+                    }
+                } else if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
+                    if (tecla->code == sf::Keyboard::Key::R) {
+                        resetearPartida();
+                    }
+                }
+                continue;
+            }
+
             if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
                 if (click->button == sf::Mouse::Button::Left &&
                     estadoJuego == EstadoJuego::Jugando &&
@@ -912,13 +947,6 @@ private:
             }
 
             if (const auto* botonPresionado = evento->getIf<sf::Event::KeyPressed>()) {
-                if (estadoJuego == EstadoJuego::GameOver) {
-                    if (botonPresionado->code == sf::Keyboard::Key::R) {
-                        resetearPartida();
-                    }
-                    continue;
-                }
-
                 if (estadoJuego == EstadoJuego::Jumpscare || estadoJuego == EstadoJuego::Victoria) {
                     continue;
                 }
@@ -1250,45 +1278,65 @@ private:
         ventana.clear(sf::Color::Black);
         ventana.setView(vistaInterfaz);
 
-        for (int y = 0; y < 720; y += 12) {
-            sf::RectangleShape linea(sf::Vector2f(1280.0f, 4.0f));
+        for (int y = 0; y < 720; y += 10) {
+            sf::RectangleShape linea(sf::Vector2f(1280.0f, 2.0f));
             linea.setPosition({0.0f, static_cast<float>(y)});
-            int brillo = 20 + (std::rand() % 55);
-            linea.setFillColor(sf::Color(brillo, 0, 0));
+            int brillo = 12 + (std::rand() % 32);
+            linea.setFillColor(sf::Color(brillo, 0, 0, 180));
             ventana.draw(linea);
         }
 
-        sf::RectangleShape panel(sf::Vector2f(620.0f, 170.0f));
-        panel.setPosition({330.0f, 265.0f});
-        panel.setFillColor(sf::Color(10, 10, 10, 230));
-        panel.setOutlineColor(sf::Color(160, 0, 0));
-        panel.setOutlineThickness(4.0f);
+        sf::RectangleShape resplandor(sf::Vector2f(1280.0f, 720.0f));
+        resplandor.setFillColor(sf::Color(80, 0, 0, 55));
+        ventana.draw(resplandor);
+
+        sf::RectangleShape panel(sf::Vector2f(650.0f, 390.0f));
+        panel.setPosition({315.0f, 155.0f});
+        panel.setFillColor(sf::Color(5, 5, 8, 242));
+        panel.setOutlineColor(sf::Color(190, 15, 15));
+        panel.setOutlineThickness(5.0f);
         ventana.draw(panel);
 
-
-        sf::RectangleShape barra(sf::Vector2f(460.0f, 18.0f));
-        barra.setFillColor(sf::Color(190, 0, 0));
-        barra.setPosition({410.0f, 315.0f});
-        ventana.draw(barra);
-        barra.setPosition({410.0f, 365.0f});
-        ventana.draw(barra);
-
-        sf::RectangleShape reinicio(sf::Vector2f(280.0f, 12.0f));
-        reinicio.setFillColor(sf::Color(220, 220, 220));
-        reinicio.setPosition({500.0f, 405.0f});
-        ventana.draw(reinicio);
+        sf::RectangleShape botonSalir(sf::Vector2f(370.0f, 70.0f));
+        botonSalir.setPosition({455.0f, 470.0f});
+        botonSalir.setFillColor(sf::Color(45, 5, 8, 245));
+        botonSalir.setOutlineColor(sf::Color(220, 45, 45));
+        botonSalir.setOutlineThickness(3.0f);
+        ventana.draw(botonSalir);
 
         if (fuenteUICargada) {
-            sf::Text titulo(fuenteUI, "GAME OVER", 84);
-            titulo.setFillColor(sf::Color(220, 20, 20));
+            sf::Text titulo(fuenteUI, "GAME OVER", 88);
+            titulo.setFillColor(sf::Color(235, 25, 25));
+            titulo.setOutlineColor(sf::Color::Black);
+            titulo.setOutlineThickness(4.0f);
             titulo.setStyle(sf::Text::Bold);
-            titulo.setPosition({405.0f, 285.0f});
+            sf::FloatRect limitesTitulo = titulo.getLocalBounds();
+            titulo.setOrigin({limitesTitulo.position.x + limitesTitulo.size.x / 2.0f, limitesTitulo.position.y});
+            titulo.setPosition({640.0f, 190.0f});
             ventana.draw(titulo);
 
-            sf::Text instruccion(fuenteUI, "Presiona R para reiniciar", 30);
-            instruccion.setFillColor(sf::Color(230, 230, 230));
-            instruccion.setPosition({460.0f, 390.0f});
-            ventana.draw(instruccion);
+            sf::Text reiniciar(fuenteUI, "REINICIAR JUEGO", 34);
+            reiniciar.setFillColor(sf::Color::White);
+            reiniciar.setStyle(sf::Text::Bold);
+            sf::FloatRect limitesReiniciar = reiniciar.getLocalBounds();
+            reiniciar.setOrigin({limitesReiniciar.position.x + limitesReiniciar.size.x / 2.0f, limitesReiniciar.position.y});
+            reiniciar.setPosition({640.0f, 325.0f});
+            ventana.draw(reiniciar);
+
+            sf::Text tecla(fuenteUI, "Presiona la letra R", 25);
+            tecla.setFillColor(sf::Color(205, 205, 205));
+            sf::FloatRect limitesTecla = tecla.getLocalBounds();
+            tecla.setOrigin({limitesTecla.position.x + limitesTecla.size.x / 2.0f, limitesTecla.position.y});
+            tecla.setPosition({640.0f, 380.0f});
+            ventana.draw(tecla);
+
+            sf::Text salir(fuenteUI, "SALIR AL MENU", 30);
+            salir.setFillColor(sf::Color(255, 225, 225));
+            salir.setStyle(sf::Text::Bold);
+            sf::FloatRect limitesSalir = salir.getLocalBounds();
+            salir.setOrigin({limitesSalir.position.x + limitesSalir.size.x / 2.0f, limitesSalir.position.y + limitesSalir.size.y / 2.0f});
+            salir.setPosition({640.0f, 505.0f});
+            ventana.draw(salir);
         }
 
         ventana.display();
@@ -1729,6 +1777,8 @@ public:
         fuenteUICargada = cargarFuenteDesdeRutas(fuenteUI, {
             "assets/fonts/arial.ttf",
             "../assets/fonts/arial.ttf",
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
             "C:/Windows/Fonts/arial.ttf",
             "C:/Windows/Fonts/segoeui.ttf"
         });
