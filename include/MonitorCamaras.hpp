@@ -217,10 +217,28 @@ private:
         return std::find(permitidos.begin(), permitidos.end(), nombre) != permitidos.end();
     }
 
+    bool personajeVisibleEnCamara(const std::string& nombre) const {
+        if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
+            return nombre == "Gobo" || nombre == "Director" || nombre == "TheUsher" || nombre == "TicketyStub";
+        }
+        if (camaraActual == TipoCamara::CAM_02_PASILLO_A) {
+            return nombre == "Gobo" || nombre == "Popy" || nombre == "TicketyStub";
+        }
+        if (camaraActual == TipoCamara::CAM_03_PASILLO_B) {
+            return nombre == "Director" || nombre == "TheUsher";
+        }
+        if (camaraActual == TipoCamara::CAM_04_SALAS) {
+            return nombre == "Gobo" || nombre == "Director" || nombre == "TheUsher" || nombre == "TicketyStub";
+        }
+        if (camaraActual == TipoCamara::CAM_05_BANOS) {
+            return nombre == "Popy" || nombre == "TheUsher";
+        }
+        return false;
+    }
+
     void dibujarMiniaturaPersonaje(sf::RenderWindow& ventana, const std::string& nombre, sf::Vector2f centro) const {
         if (!personajePermitido(nombre)) return;
-
-        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return;
+        if (!personajeVisibleEnCamara(nombre)) return;
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
         const sf::Texture* texturaParaDibujar = nullptr;
@@ -248,8 +266,8 @@ private:
         sf::Sprite sprite(*texturaParaDibujar);
 
         sf::IntRect bbox = obtenerBoundingBoxAlpha(*texturaParaDibujar);
-        float escalaX = 86.f / static_cast<float>(bbox.size.x);
-        float escalaY = 86.f / static_cast<float>(bbox.size.y);
+        float escalaX = 80.f / static_cast<float>(bbox.size.x);
+        float escalaY = 80.f / static_cast<float>(bbox.size.y);
         float escala = std::min(escalaX, escalaY);
 
         sprite.setScale({escala, escala});
@@ -266,68 +284,82 @@ private:
 
         if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
             if (clave == "Gobo") {
-                posicion = {250.f, suelo};
-                maximo = {280.f, 590.f};
+                posicion = {215.f, 680.f};
+                maximo = {155.f, 315.f};
             } else if (clave == "Director") {
-
-                posicion = {920.f, 460.f};
-                maximo = {300.f, 420.f};
+                posicion = {1030.f, 625.f};
+                maximo = {102.f, 220.f};
             } else if (clave == "Popy") {
-                posicion = {785.f, suelo};
-                maximo = {310.f, 610.f};
+                posicion = {760.f, 655.f};
+                maximo = {105.f, 210.f};
             } else if (clave == "TheUsher") {
-                posicion = {1015.f, suelo};
-                maximo = {300.f, 600.f};
+                posicion = {880.f, 610.f};
+                maximo = {98.f, 210.f};
             } else if (clave == "TicketyStub") {
-                posicion = {1135.f, suelo};
-                maximo = {260.f, 560.f};
+                posicion = {1110.f, 660.f};
+                maximo = {110.f, 190.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_02_PASILLO_A) {
             if (clave == "TicketyStub") {
-                posicion = {410.f, suelo};
-                maximo = {320.f, 610.f};
+                posicion = {520.f, 670.f};
+                maximo = {140.f, 200.f};
             } else if (clave == "Director") {
-                posicion = {665.f, suelo};
-                maximo = {340.f, 640.f};
+                posicion = {665.f, 670.f};
+                maximo = {110.f, 210.f};
             } else {
-                posicion = {900.f, suelo};
-                maximo = {320.f, 610.f};
+                posicion = {900.f, 670.f};
+                maximo = {125.f, 220.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_03_PASILLO_B) {
             if (clave == "Popy") {
-                posicion = {760.f, suelo};
-                maximo = {350.f, 640.f};
+                posicion = {760.f, 670.f};
+                maximo = {140.f, 230.f};
+            } else if (clave == "Director") {
+                posicion = {880.f, 670.f};
+                maximo = {112.f, 220.f};
+            } else if (clave == "TheUsher") {
+                posicion = {520.f, 645.f};
+                maximo = {100.f, 200.f};
             } else {
-                posicion = {520.f, suelo};
-                maximo = {320.f, 610.f};
+                posicion = {520.f, 670.f};
+                maximo = {120.f, 220.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_04_SALAS) {
             if (clave == "Gobo") {
-                posicion = {500.f, suelo};
-                maximo = {330.f, 620.f};
+                posicion = {500.f, 670.f};
+                maximo = {130.f, 230.f};
+            } else if (clave == "Director") {
+                posicion = {780.f, 670.f};
+                maximo = {110.f, 210.f};
+            } else if (clave == "TheUsher") {
+                posicion = {940.f, 640.f};
+                maximo = {98.f, 190.f};
             } else {
-                posicion = {775.f, suelo};
-                maximo = {330.f, 620.f};
+                posicion = {775.f, 670.f};
+                maximo = {120.f, 220.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_05_BANOS) {
             if (clave == "Popy") {
-                posicion = {760.f, suelo};
-                maximo = {340.f, 630.f};
+                posicion = {760.f, 675.f};
+                maximo = {132.f, 235.f};
+            } else if (clave == "TheUsher") {
+                posicion = {520.f, 650.f};
+                maximo = {100.f, 200.f};
             } else {
-                posicion = {520.f, suelo};
-                maximo = {320.f, 610.f};
+                posicion = {520.f, 675.f};
+                maximo = {120.f, 220.f};
             }
         }
     }
@@ -527,85 +559,6 @@ public:
             float escalaY = pantalla.y / texturasFondo.at(camaraActual).getSize().y;
             fondoSprite.setScale({escalaX, escalaY});
             ventana.draw(fondoSprite);
-
-
-            if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
-
-                const sf::Texture* texDirector = nullptr;
-                auto it = texturasPersonajes.find(getClaveTexturaPersonaje("Director"));
-                sf::Texture texTemp;
-                if (it != texturasPersonajes.end()) {
-                    texDirector = &it->second;
-                } else {
-
-                    std::vector<std::string> preferidas = {
-                        "assets/textures/personajes/director/7fe9fc08-2881-4e84-92a4-0efea3ba737a_removalai_preview.png",
-                        "../assets/textures/personajes/director/7fe9fc08-2881-4e84-92a4-0efea3ba737a_removalai_preview.png"
-                    };
-                    for (const auto& p : preferidas) {
-                        if (texTemp.loadFromFile(p)) { texDirector = &texTemp; break; }
-                    }
-
-
-                    if (texDirector == nullptr) {
-                        std::vector<std::string> posibles = {
-                            "assets/textures/camaras/dulceria/director.png",
-                            "assets/textures/camaras/dulceria/Director.png",
-                            "../assets/textures/camaras/dulceria/director.png",
-                            "../assets/textures/camaras/dulceria/Director.png"
-                        };
-                        for (const auto& p : posibles) {
-                            if (texTemp.loadFromFile(p)) { texDirector = &texTemp; break; }
-                        }
-                    }
-
-                    if (texDirector == nullptr) {
-                        std::vector<std::string> rutas = {
-                            "assets/textures/personajes/director",
-                            "../assets/textures/personajes/director"
-                        };
-                        cargarPrimeraImagenEnCarpeta(texTemp, rutas);
-                        if (texTemp.getSize().x > 0) texDirector = &texTemp;
-                    }
-                }
-
-                if (texDirector != nullptr) {
-
-                    sf::IntRect bbox = obtenerBoundingBoxAlpha(*texDirector);
-                    sf::Vector2f posicion, maximo;
-                    obtenerPlanoPersonaje("Director", posicion, maximo);
-                    float escalaXdir = maximo.x / static_cast<float>(bbox.size.x);
-                    float escalaYdir = maximo.y / static_cast<float>(bbox.size.y);
-                    float escalaDir = std::min(escalaXdir, escalaYdir);
-
-                    sf::Sprite spriteDir(*texDirector);
-                    spriteDir.setScale({escalaDir, escalaDir});
-                    spriteDir.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.f,
-                                         static_cast<float>(bbox.position.y + bbox.size.y)});
-
-
-
-                    spriteDir.setPosition(sf::Vector2f(posicion.x, pantalla.y));
-                    ventana.draw(spriteDir);
-
-
-
-                    const sf::Texture& texFondo = texturasFondo.at(camaraActual);
-                    unsigned int w = texFondo.getSize().x;
-                    unsigned int h = texFondo.getSize().y;
-
-                    sf::IntRect rectPop(sf::Vector2i(static_cast<int>(w * 0.00f), static_cast<int>(h * 0.45f)),
-                                        sf::Vector2i(static_cast<int>(w * 0.35f), static_cast<int>(h * 0.40f)));
-
-
-                    sf::Sprite overlay(texFondo);
-                    overlay.setTextureRect(rectPop);
-                    overlay.setPosition(sf::Vector2f(static_cast<float>(rectPop.position.x) * escalaX,
-                                                     static_cast<float>(rectPop.position.y) * escalaY));
-                    overlay.setScale({escalaX, escalaY});
-                    ventana.draw(overlay);
-                }
-            }
         } else {
 
             sf::Color colorFondo = colorFondoFallback.count(camaraActual) > 0
@@ -647,8 +600,7 @@ public:
 
     void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre) {
         if (!personajePermitido(nombre)) return;
-
-        if (camaraActual == TipoCamara::CAM_01_DULCERIA) return;
+        if (!personajeVisibleEnCamara(nombre)) return;
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
         const sf::Texture* texturaParaDibujar = nullptr;
@@ -709,9 +661,10 @@ public:
             sf::Vector2f posicion;
             sf::Vector2f maximo;
             obtenerPlanoPersonaje(nombre, posicion, maximo);
+            maximo *= 1.65f;
             float escalaX = maximo.x / static_cast<float>(bbox.size.x);
             float escalaY = maximo.y / static_cast<float>(bbox.size.y);
-            float escala = std::min(escalaX, escalaY);
+            float escala = std::min(escalaX, escalaY) * 1.15f;
 
             sprite.setScale({escala, escala});
             sprite.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.f, static_cast<float>(bbox.position.y + bbox.size.y)});

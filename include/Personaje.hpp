@@ -40,11 +40,6 @@ public:
             return EventoPuerta::Ninguno;
         }
 
-        if (puertaCerrada) {
-            resetear();
-            return EventoPuerta::Golpe;
-        }
-
         if (luzEncendida) {
             tiempoBajoLuz += dt;
             if (tiempoBajoLuz >= 0.8f) {
@@ -55,7 +50,21 @@ public:
             tiempoBajoLuz = 0.0f;
         }
 
-        if (monitorAbierto && !puertaCerrada) {
+        if (puertaCerrada) {
+            if (monitorAbierto) {
+                tiempoEnPuerta += dt;
+                if (tiempoEnPuerta >= tiempoPermanenciaPuerta()) {
+                    estaAdentro = true;
+                    estaEnLaPuerta = false;
+                    return EventoPuerta::Entrada;
+                }
+            } else {
+                tiempoEnPuerta = 0.0f;
+            }
+            return EventoPuerta::Ninguno;
+        }
+
+        if (monitorAbierto) {
             tiempoMonitorAbierto += dt;
             if (tiempoMonitorAbierto >= 1.2f) {
                 estaAdentro = true;
@@ -167,12 +176,12 @@ public:
     void avanzarEnRuta() override {
         switch (posicionActual) {
             case TipoCamara::CAM_01_DULCERIA:
+                posicionActual = TipoCamara::CAM_04_SALAS;
+                break;
+            case TipoCamara::CAM_04_SALAS:
                 posicionActual = TipoCamara::CAM_03_PASILLO_B;
                 break;
             case TipoCamara::CAM_03_PASILLO_B:
-                posicionActual = TipoCamara::CAM_05_BANOS;
-                break;
-            case TipoCamara::CAM_05_BANOS:
                 estaEnLaPuerta = true;
                 tiempoEnPuerta = 0.0f;
                 break;
@@ -244,17 +253,38 @@ public:
         }
 
         if (puertaCerrada) {
-            resetear();
-            return EventoPuerta::Golpe;
+            if (monitorAbierto) {
+                tiempoEnPuerta += dt;
+                if (tiempoEnPuerta >= 3.0f) {
+                    estaAdentro = true;
+                    estaEnLaPuerta = false;
+                    return EventoPuerta::Entrada;
+                }
+            } else {
+                tiempoEnPuerta = 0.0f;
+            }
+            return EventoPuerta::Ninguno;
         }
 
-        tiempoEnPuerta += dt;
-        if (tiempoEnPuerta >= 3.0f) {
-            if (monitorAbierto) {
+        if (luzEncendida) {
+            tiempoBajoLuz += dt;
+            if (tiempoBajoLuz >= 0.8f) {
+                resetear();
+                return EventoPuerta::Golpe;
+            }
+        } else {
+            tiempoBajoLuz = 0.0f;
+        }
+
+        if (monitorAbierto) {
+            tiempoEnPuerta += dt;
+            if (tiempoEnPuerta >= 3.0f) {
                 estaAdentro = true;
                 estaEnLaPuerta = false;
                 return EventoPuerta::Entrada;
             }
+        } else {
+            tiempoEnPuerta = 0.0f;
         }
 
         return EventoPuerta::Ninguno;
@@ -278,26 +308,38 @@ public:
     }
 
     EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool monitorAbierto, bool luzEncendida = true) override {
-        (void)luzEncendida;
         if (estaAdentro || !estaEnLaPuerta) {
             return EventoPuerta::Ninguno;
         }
 
         if (puertaCerrada) {
-            resetear();
-            return EventoPuerta::Golpe;
+            if (monitorAbierto) {
+                tiempoEnPuerta += dt;
+                if (tiempoEnPuerta >= tiempoPermanenciaPuerta()) {
+                    estaAdentro = true;
+                    estaEnLaPuerta = false;
+                    return EventoPuerta::Entrada;
+                }
+            } else {
+                tiempoEnPuerta = 0.0f;
+            }
+            return EventoPuerta::Ninguno;
         }
 
-        if (monitorAbierto && !puertaCerrada) {
-            estaAdentro = true;
-            estaEnLaPuerta = false;
-            return EventoPuerta::Entrada;
+        if (luzEncendida) {
+            tiempoBajoLuz += dt;
+            if (tiempoBajoLuz >= 0.8f) {
+                resetear();
+                return EventoPuerta::Golpe;
+            }
+        } else {
+            tiempoBajoLuz = 0.0f;
         }
 
         if (monitorAbierto) {
-            tiempoMonitorAbierto += dt;
-        } else {
-            tiempoMonitorAbierto = 0.0f;
+            estaAdentro = true;
+            estaEnLaPuerta = false;
+            return EventoPuerta::Entrada;
         }
 
         return EventoPuerta::Ninguno;
@@ -344,9 +386,55 @@ public:
         return false;
     }
 
+    EventoPuerta actualizarEstadoPuerta(float dt, bool puertaCerrada, bool monitorAbierto, bool luzEncendida = true) override {
+        if (estaAdentro || !estaEnLaPuerta) {
+            return EventoPuerta::Ninguno;
+        }
+
+        if (luzEncendida) {
+            tiempoBajoLuz += dt;
+            if (tiempoBajoLuz >= 0.7f) {
+                posicionActual = TipoCamara::CAM_04_SALAS;
+                estaEnLaPuerta = false;
+                tiempoEnPuerta = 0.0f;
+                tiempoBajoLuz = 0.0f;
+                tiempoMonitorAbierto = 0.0f;
+                return EventoPuerta::Golpe;
+            }
+        } else {
+            tiempoBajoLuz = 0.0f;
+        }
+
+        if (puertaCerrada) {
+            tiempoEnPuerta += dt;
+            if (tiempoEnPuerta >= 1.8f) {
+                estaAdentro = true;
+                estaEnLaPuerta = false;
+                return EventoPuerta::Entrada;
+            }
+            return EventoPuerta::Ninguno;
+        }
+
+        if (monitorAbierto) {
+            tiempoMonitorAbierto += dt;
+            if (tiempoMonitorAbierto >= 1.0f) {
+                estaAdentro = true;
+                estaEnLaPuerta = false;
+                return EventoPuerta::Entrada;
+            }
+        } else {
+            tiempoMonitorAbierto = 0.0f;
+        }
+
+        return EventoPuerta::Ninguno;
+    }
+
     void avanzarEnRuta() override {
         switch (posicionActual) {
             case TipoCamara::CAM_01_DULCERIA:
+                posicionActual = (std::rand() % 2 == 0) ? TipoCamara::CAM_02_PASILLO_A : TipoCamara::CAM_04_SALAS;
+                break;
+            case TipoCamara::CAM_04_SALAS:
                 posicionActual = TipoCamara::CAM_02_PASILLO_A;
                 break;
             case TipoCamara::CAM_02_PASILLO_A:

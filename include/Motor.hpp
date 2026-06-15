@@ -486,6 +486,7 @@ private:
         bool movioDirector = director.procesarTickMovimiento(calcularDificultadBasePorPersonaje(director), camaraObservada(director), horaActual);
         bool movioPopy = popy.procesarTickMovimiento(calcularDificultadBasePorPersonaje(popy), monitorAbierto, horaActual);
         bool movioUsher = usher.procesarTickMovimiento(calcularDificultadBasePorPersonaje(usher), camaraObservada(usher), horaActual);
+        bool movioStub = stub.procesarTickMovimiento(calcularDificultadBasePorPersonaje(stub), camaraObservada(stub), horaActual);
 
         if (movioGobo) {
             if (gobo.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 60.0f);
@@ -503,6 +504,10 @@ private:
             if (usher.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {1.0f, 0.0f, 0.0f}, 58.0f);
             else reproducirSonidoEspacial("paso_der", {1.0f, 0.0f, 0.0f}, 48.0f);
         }
+        if (movioStub) {
+            if (stub.esEnLaPuerta()) reproducirSonidoEspacial("alerta_puerta", {-1.0f, 0.0f, 0.0f}, 58.0f);
+            else reproducirSonidoEspacial("paso_izq", {-1.0f, 0.0f, 0.0f}, 48.0f);
+        }
 
         if (gobo.esEstaAdentro()) {
             iniciarAtaque(gobo.getNombre());
@@ -518,6 +523,10 @@ private:
         }
         if (usher.esEstaAdentro()) {
             iniciarAtaque(usher.getNombre());
+            return;
+        }
+        if (stub.esEstaAdentro()) {
+            iniciarAtaque(stub.getNombre());
             return;
         }
     }
@@ -753,7 +762,12 @@ private:
                 sf::Sprite sprite(texturaInsertada.first->second);
 
                 sf::IntRect bbox = obtenerBoundingBoxAlpha(texturaInsertada.first->second);
-                const float alturaObjetivoPuerta = 300.0f;
+                float alturaObjetivoPuerta = 280.0f;
+                if (personajes[i] == "Gobo") alturaObjetivoPuerta = 320.0f;
+                else if (personajes[i] == "Director") alturaObjetivoPuerta = 260.0f;
+                else if (personajes[i] == "Popy") alturaObjetivoPuerta = 225.0f;
+                else if (personajes[i] == "TheUsher") alturaObjetivoPuerta = 250.0f;
+                else if (personajes[i] == "TicketyStub") alturaObjetivoPuerta = 190.0f;
                 float escala = 1.0f;
                 if (bbox.size.y > 0) escala = alturaObjetivoPuerta / static_cast<float>(bbox.size.y);
                 sprite.setScale({escala, escala});
@@ -988,6 +1002,7 @@ private:
         EventoPuerta eventoDirector = director.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzDerechaEncendida());
         EventoPuerta eventoPopy = popy.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
         EventoPuerta eventoUsher = usher.actualizarEstadoPuerta(dt, jugador.esPuertaDerechaCerrada(), jugador.esMonitorAbierto(), false);
+        EventoPuerta eventoStub = stub.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
 
         if (eventoGobo == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 68.0f);
         if (eventoDirector == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 68.0f);
@@ -996,11 +1011,13 @@ private:
             reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 70.0f);
         }
         if (eventoUsher == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {1.0f, 0.0f, 0.0f}, 66.0f);
+        if (eventoStub == EventoPuerta::Golpe) reproducirSonidoEspacial("golpe_puerta", {-1.0f, 0.0f, 0.0f}, 66.0f);
 
         if (eventoGobo == EventoPuerta::Entrada) { iniciarAtaque(gobo.getNombre()); return; }
         if (eventoDirector == EventoPuerta::Entrada) { iniciarAtaque(director.getNombre()); return; }
         if (eventoPopy == EventoPuerta::Entrada) { iniciarAtaque(popy.getNombre()); return; }
         if (eventoUsher == EventoPuerta::Entrada) { iniciarAtaque(usher.getNombre()); return; }
+        if (eventoStub == EventoPuerta::Entrada) { iniciarAtaque(stub.getNombre()); return; }
         if (jugador.esLuzIzquierdaEncendida() && gobo.esEnLaPuerta()) {
             tiempoLuzIzquierdaActiva += dt;
             if (tiempoLuzIzquierdaActiva >= 0.8f) {
@@ -1351,6 +1368,7 @@ private:
             if (!jugador.esPuertaIzquierdaCerrada()) {
                 if (gobo.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, gobo.getNombre(), true, jugador.esLuzIzquierdaEncendida());
                 if (popy.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, popy.getNombre(), true, jugador.esLuzIzquierdaEncendida());
+                if (stub.esEnLaPuerta()) renderizarPersonajeEnPuerta(ventana, stub.getNombre(), true, jugador.esLuzIzquierdaEncendida());
             }
 
             if (!jugador.esPuertaDerechaCerrada()) {
@@ -1372,6 +1390,7 @@ private:
             if (!director.esEnLaPuerta() && director.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Director");
             if (!popy.esEnLaPuerta() && popy.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Popy");
             if (!usher.esEnLaPuerta() && usher.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TheUsher");
+            if (!stub.esEnLaPuerta() && stub.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TicketyStub");
             if (fuenteUICargada) {
                 monitor.dibujarRutaPersonaje(
                     ventana, fuenteUI, "Gobo",
@@ -1389,6 +1408,10 @@ private:
                     ventana, fuenteUI, "The Usher",
                     {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_03_PASILLO_B},
                     usher.getPosicionActual(), usher.esEnLaPuerta(), 3);
+                monitor.dibujarRutaPersonaje(
+                    ventana, fuenteUI, "Tickety",
+                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_02_PASILLO_A},
+                    stub.getPosicionActual(), stub.esEnLaPuerta(), 4);
             }
             }
         } else {
