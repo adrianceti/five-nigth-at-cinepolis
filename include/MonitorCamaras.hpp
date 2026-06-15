@@ -341,8 +341,8 @@ private:
 
         if (camara == TipoCamara::CAM_01_DULCERIA) {
             if (clave == "Gobo") {
-                posicion = {215.f, 680.f};
-                maximo = {155.f, 315.f};
+                posicion = {1210.f, 625.f};
+                maximo = {72.f, 150.f};
             } else if (clave == "Director") {
                 posicion = {1030.f, 625.f};
                 maximo = {102.f, 220.f};
@@ -350,7 +350,7 @@ private:
                 posicion = {760.f, 655.f};
                 maximo = {105.f, 210.f};
             } else if (clave == "TheUsher") {
-                posicion = {880.f, 610.f};
+                posicion = {880.f, suelo};
                 maximo = {98.f, 210.f};
             }
             return;
