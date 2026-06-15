@@ -89,6 +89,7 @@ private:
 
     sf::Clock relojNoche;
     EstadoJuego estadoJuego;
+    int nocheActual;
     int horaActual;
     float tiempoPorHora;
     float acumuladorHora;
@@ -445,6 +446,13 @@ private:
             case 4:  return {5};
             case 5:  return {7};
             default: return {0};
+        }
+    }
+
+    float obtenerTasaConsumoBasePorNoche() const {
+        switch (nocheActual) {
+            case 1: return 1.0f / 9.6f;
+            default: return 0.141f;
         }
     }
 
@@ -976,7 +984,7 @@ private:
             }
         }
 
-        jugador.bajarEnergia(dt);
+        jugador.bajarEnergia(dt, obtenerTasaConsumoBasePorNoche());
         actualizarInterferenciaMonitor();
 
         EventoPuerta eventoGobo = gobo.actualizarEstadoPuerta(dt, jugador.esPuertaIzquierdaCerrada(), jugador.esMonitorAbierto(), jugador.esLuzIzquierdaEncendida());
@@ -1129,13 +1137,15 @@ private:
         }
     }
 
-    void dibujarTexturaPantallaCompleta(sf::Texture& textura) {
+    void dibujarTexturaPantallaCompleta(sf::Texture& textura, bool ajustarCompleta = false) {
         ventana.setView(vistaInterfaz);
         sf::Sprite sprite(textura);
         const auto tamTextura = textura.getSize();
-        float escalaX = 1280.0f / static_cast<float>(tamTextura.x);
-        float escalaY = 720.0f / static_cast<float>(tamTextura.y);
-        float escala = std::max(escalaX, escalaY);
+        const float anchoDestino = ajustarCompleta ? 1152.0f : 1280.0f;
+        const float altoDestino = ajustarCompleta ? 648.0f : 720.0f;
+        float escalaX = anchoDestino / static_cast<float>(tamTextura.x);
+        float escalaY = altoDestino / static_cast<float>(tamTextura.y);
+        float escala = ajustarCompleta ? std::min(escalaX, escalaY) : std::max(escalaX, escalaY);
         sprite.setScale({escala, escala});
         sprite.setPosition({
             (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
@@ -1148,7 +1158,7 @@ private:
         ventana.clear(sf::Color::Black);
         auto textura = texturasJumpscare.find(atacanteActual);
         if (textura != texturasJumpscare.end()) {
-            dibujarTexturaPantallaCompleta(textura->second);
+            dibujarTexturaPantallaCompleta(textura->second, true);
         } else {
             sf::RectangleShape fondo(sf::Vector2f(1280.0f, 720.0f));
             fondo.setFillColor(sf::Color(120, 0, 0));
@@ -1587,6 +1597,7 @@ public:
               tiempoLuzIzquierdaActiva(0.0f),
               tiempoLuzDerechaActiva(0.0f),
               estadoJuego(EstadoJuego::MenuPrincipal),
+              nocheActual(1),
               horaActual(12),
               tiempoPorHora(86.0f),
               acumuladorHora(0.0f),

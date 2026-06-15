@@ -54,9 +54,9 @@ public:
         actualizarConsumo();
     }
 
-    void bajarEnergia(float tiempoTranscurrido) {
+    void bajarEnergia(float tiempoTranscurrido, float tasaBasePorSegundo = 0.10416667f) {
         if (energia > 0.0f) {
-            float tasaConsumo = 0.141f * static_cast<float>(nivelConsumo);
+            float tasaConsumo = tasaBasePorSegundo * static_cast<float>(nivelConsumo);
             energia -= tasaConsumo * tiempoTranscurrido;
             if (energia < 0.0f) energia = 0.0f;
         }
