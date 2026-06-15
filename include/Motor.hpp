@@ -955,6 +955,84 @@ private:
         }
     }
 
+    void dibujarEfectosTenebrososPortada(const sf::Transform& transformacion, float escala, float tiempo) {
+        float cicloLuz = std::fmod(tiempo, 6.4f);
+        bool luzEncendida = !(cicloLuz > 1.18f && cicloLuz < 1.44f) &&
+                            !(cicloLuz > 1.62f && cicloLuz < 2.08f) &&
+                            !(cicloLuz > 4.72f && cicloLuz < 5.26f);
+        float oscuridadBase = luzEncendida ? 26.0f : 105.0f;
+        oscuridadBase += luzEncendida ? 8.0f * std::sin(tiempo * 2.1f) : 0.0f;
+
+        sf::RectangleShape oscuridad({1280.0f, 720.0f});
+        oscuridad.setFillColor(sf::Color(0, 2, 7, static_cast<std::uint8_t>(oscuridadBase)));
+        ventana.draw(oscuridad);
+
+        float cicloOjos = std::fmod(tiempo + 0.37f, 4.9f);
+        bool ojosEncendidos = !(cicloOjos > 0.92f && cicloOjos < 1.18f) &&
+                              !(cicloOjos > 2.74f && cicloOjos < 3.22f) &&
+                              !(cicloOjos > 4.15f && cicloOjos < 4.34f);
+        float pulsoOjos = ojosEncendidos
+            ? 0.72f + 0.19f * std::sin(tiempo * 6.2f) + 0.09f * std::sin(tiempo * 15.0f)
+            : 0.0f;
+
+        for (const sf::Vector2f ojoTextura : {sf::Vector2f(617.0f, 379.0f), sf::Vector2f(678.0f, 379.0f)}) {
+            sf::Vector2f ojo = transformacion.transformPoint(ojoTextura);
+
+            if (!ojosEncendidos) {
+                sf::CircleShape sombra(15.0f * escala);
+                sombra.setOrigin({15.0f * escala, 15.0f * escala});
+                sombra.setScale({0.8f, 1.0f});
+                sombra.setPosition(ojo);
+                sombra.setFillColor(sf::Color(11, 0, 0, 238));
+                ventana.draw(sombra);
+                continue;
+            }
+
+            sf::CircleShape halo(38.0f * escala);
+            halo.setOrigin({38.0f * escala, 38.0f * escala});
+            halo.setScale({0.82f, 1.0f});
+            halo.setPosition(ojo);
+            halo.setFillColor(sf::Color(230, 0, 0, static_cast<std::uint8_t>(47.0f * pulsoOjos)));
+            ventana.draw(halo);
+
+            sf::CircleShape nucleo(10.0f * escala);
+            nucleo.setOrigin({10.0f * escala, 10.0f * escala});
+            nucleo.setPosition(ojo);
+            nucleo.setFillColor(sf::Color(255, 35, 24, static_cast<std::uint8_t>(190.0f * pulsoOjos)));
+            ventana.draw(nucleo);
+        }
+
+        float cicloLetrero = std::fmod(tiempo + 1.1f, 5.35f);
+        bool letreroEncendido = !(cicloLetrero > 1.36f && cicloLetrero < 1.68f) &&
+                                !(cicloLetrero > 3.18f && cicloLetrero < 3.72f) &&
+                                !(cicloLetrero > 4.66f && cicloLetrero < 4.82f);
+        sf::Vector2f centroLetrero = transformacion.transformPoint({1520.0f, 565.0f});
+
+        if (letreroEncendido) {
+            float pulso = 0.65f + 0.22f * std::sin(tiempo * 5.5f);
+            sf::RectangleShape resplandor({270.0f * escala, 105.0f * escala});
+            resplandor.setOrigin({135.0f * escala, 52.5f * escala});
+            resplandor.setPosition(centroLetrero);
+            resplandor.setRotation(sf::degrees(6.0f));
+            resplandor.setFillColor(sf::Color(30, 230, 75, static_cast<std::uint8_t>(24.0f * pulso)));
+            ventana.draw(resplandor);
+        } else {
+            sf::RectangleShape apagado({270.0f * escala, 105.0f * escala});
+            apagado.setOrigin({135.0f * escala, 52.5f * escala});
+            apagado.setPosition(centroLetrero);
+            apagado.setRotation(sf::degrees(6.0f));
+            apagado.setFillColor(sf::Color(0, 4, 1, 145));
+            ventana.draw(apagado);
+        }
+
+        float destello = std::max(0.0f, std::sin(tiempo * 19.0f) - 0.965f) / 0.035f;
+        if (destello > 0.0f && luzEncendida) {
+            sf::RectangleShape luzFria({1280.0f, 720.0f});
+            luzFria.setFillColor(sf::Color(35, 55, 72, static_cast<std::uint8_t>(18.0f * destello)));
+            ventana.draw(luzFria);
+        }
+    }
+
     void renderizarTransicionSala3() {
         ventana.clear(sf::Color::Black);
         ventana.setView(vistaInterfaz);
@@ -1642,6 +1720,11 @@ private:
             ventana.setView(vistaInterfaz);
             if (spritePortada.has_value()) {
                 ventana.draw(spritePortada.value());
+                dibujarEfectosTenebrososPortada(
+                    spritePortada->getTransform(),
+                    spritePortada->getScale().x,
+                    relojEfectosMenu.getElapsedTime().asSeconds()
+                );
             }
             ventana.display();
             return;
