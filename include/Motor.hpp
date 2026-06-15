@@ -1362,15 +1362,18 @@ private:
         ventana.setView(vistaInterfaz);
         if (jugador.esMonitorAbierto()) {
             monitor.renderizar(ventana);
-            if (interferenciaMonitorActiva) {
-                dibujarInterferenciaMonitor();
-            } else {
 
+            auto dibujarPersonajesEnCamara = [&](TipoCamara camara, float desplazamientoX) {
+                if (!gobo.esEnLaPuerta() && gobo.getPosicionActual() == camara) monitor.dibujarPersonaje(ventana, "Gobo", camara, desplazamientoX);
+                if (!director.esEnLaPuerta() && director.getPosicionActual() == camara) monitor.dibujarPersonaje(ventana, "Director", camara, desplazamientoX);
+                if (!popy.esEnLaPuerta() && popy.getPosicionActual() == camara) monitor.dibujarPersonaje(ventana, "Popy", camara, desplazamientoX);
+                if (!usher.esEnLaPuerta() && usher.getPosicionActual() == camara) monitor.dibujarPersonaje(ventana, "TheUsher", camara, desplazamientoX);
+            };
 
-            if (!gobo.esEnLaPuerta() && gobo.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Gobo");
-            if (!director.esEnLaPuerta() && director.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Director");
-            if (!popy.esEnLaPuerta() && popy.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "Popy");
-            if (!usher.esEnLaPuerta() && usher.getPosicionActual() == monitor.getCamaraActual()) monitor.dibujarPersonaje(ventana, "TheUsher");
+            dibujarPersonajesEnCamara(
+                monitor.getCamaraActual(),
+                monitor.getDesplazamientoHorizontalActual());
+
             if (fuenteUICargada) {
                 monitor.dibujarRutaPersonaje(
                     ventana, fuenteUI, "Gobo",
@@ -1389,6 +1392,9 @@ private:
                     {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_03_PASILLO_B},
                     usher.getPosicionActual(), usher.esEnLaPuerta(), 3);
             }
+
+            if (interferenciaMonitorActiva) {
+                dibujarInterferenciaMonitor();
             }
         } else {
             ventana.draw(barraEnergiaFondo);

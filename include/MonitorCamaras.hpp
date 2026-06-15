@@ -34,6 +34,7 @@ private:
     bool mapaCamarasCargado;
     sf::Font fuenteMapa;
     bool fuenteMapaCargada;
+    sf::Clock relojAnimacionCamara;
 
     std::map<std::string, bool> personajesPorCamara;
     std::map<std::string, sf::Sprite> spritesPersonajes;
@@ -136,6 +137,62 @@ private:
         return std::find(ruta.begin(), ruta.end(), camara) != ruta.end();
     }
 
+    bool camaraUsaAnimacionHorizontal(TipoCamara camara) const {
+        switch (camara) {
+            case TipoCamara::CAM_01_DULCERIA:
+            case TipoCamara::CAM_02_PASILLO_A:
+            case TipoCamara::CAM_04_SALAS:
+                return true;
+            case TipoCamara::CAM_03_PASILLO_B:
+            case TipoCamara::CAM_05_BANOS:
+                return false;
+        }
+        return false;
+    }
+
+    float obtenerDesplazamientoHorizontal(TipoCamara camara) const {
+        if (!camaraUsaAnimacionHorizontal(camara)) {
+            return 0.0f;
+        }
+
+        float tiempo = relojAnimacionCamara.getElapsedTime().asSeconds();
+        return std::sin(tiempo * 1.35f) * 42.0f;
+    }
+
+    void renderizarBaseCamara(sf::RenderWindow& ventana, TipoCamara camara, float offsetX) {
+        sf::Vector2f pantalla = tamanoPantalla();
+
+        if (texturasFondo.find(camara) != texturasFondo.end()) {
+            const sf::Texture& texturaFondo = texturasFondo.at(camara);
+            if (texturaFondo.getSize().x == 0 || texturaFondo.getSize().y == 0) {
+                return;
+            }
+            sf::Sprite fondoSprite(texturaFondo);
+
+            float margenHorizontal = camaraUsaAnimacionHorizontal(camara) ? 58.0f : 0.0f;
+            float escalaX = (pantalla.x + margenHorizontal * 2.0f) / texturaFondo.getSize().x;
+            float escalaY = pantalla.y / texturaFondo.getSize().y;
+            fondoSprite.setPosition({offsetX - margenHorizontal, 0.f});
+            fondoSprite.setScale({escalaX, escalaY});
+            ventana.draw(fondoSprite);
+        } else {
+            sf::Color colorFondo = colorFondoFallback.count(camara) > 0
+                ? colorFondoFallback.at(camara)
+                : sf::Color(40, 60, 30);
+            sf::RectangleShape fondoMonitor(pantalla);
+            fondoMonitor.setFillColor(colorFondo);
+            fondoMonitor.setPosition({offsetX, 0.f});
+            ventana.draw(fondoMonitor);
+        }
+
+        for (float y = 0.0f; y < pantalla.y; y += 20.0f) {
+            sf::RectangleShape linea({pantalla.x, 1.0f});
+            linea.setPosition({0.0f, y});
+            linea.setFillColor(sf::Color(0, 80, 0, 120));
+            ventana.draw(linea);
+        }
+    }
+
     std::string getNombreCamaraCorto(TipoCamara camara) const {
         switch (camara) {
             case TipoCamara::CAM_01_DULCERIA:  return "DUL";
@@ -168,7 +225,7 @@ private:
             tamano.y / static_cast<float>(recorte.size.y)
         );
 
-        sf::Color base = obtenerColorFondo();
+        sf::Color base = obtenerColorFondo(camaraActual);
         sf::RectangleShape fondoMapa(tamano);
         fondoMapa.setPosition(origen);
         fondoMapa.setFillColor(sf::Color(
@@ -213,23 +270,27 @@ private:
         return std::find(permitidos.begin(), permitidos.end(), nombre) != permitidos.end();
     }
 
-    bool personajeVisibleEnCamara(const std::string& nombre) const {
-        if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
+    bool personajeVisibleEnCamara(TipoCamara camara, const std::string& nombre) const {
+        if (camara == TipoCamara::CAM_01_DULCERIA) {
             return nombre == "Gobo" || nombre == "Director" || nombre == "TheUsher";
         }
-        if (camaraActual == TipoCamara::CAM_02_PASILLO_A) {
+        if (camara == TipoCamara::CAM_02_PASILLO_A) {
             return nombre == "Gobo" || nombre == "Popy";
         }
-        if (camaraActual == TipoCamara::CAM_03_PASILLO_B) {
+        if (camara == TipoCamara::CAM_03_PASILLO_B) {
             return nombre == "Director" || nombre == "TheUsher";
         }
-        if (camaraActual == TipoCamara::CAM_04_SALAS) {
+        if (camara == TipoCamara::CAM_04_SALAS) {
             return nombre == "Gobo" || nombre == "Director" || nombre == "TheUsher";
         }
-        if (camaraActual == TipoCamara::CAM_05_BANOS) {
+        if (camara == TipoCamara::CAM_05_BANOS) {
             return nombre == "Popy" || nombre == "TheUsher";
         }
         return false;
+    }
+
+    bool personajeVisibleEnCamara(const std::string& nombre) const {
+        return personajeVisibleEnCamara(camaraActual, nombre);
     }
 
     void dibujarMiniaturaPersonaje(sf::RenderWindow& ventana, const std::string& nombre, sf::Vector2f centro) const {
@@ -272,13 +333,13 @@ private:
         ventana.draw(sprite);
     }
 
-    void obtenerPlanoPersonaje(const std::string& nombre, sf::Vector2f& posicion, sf::Vector2f& maximo) const {
+    void obtenerPlanoPersonaje(TipoCamara camara, const std::string& nombre, sf::Vector2f& posicion, sf::Vector2f& maximo) const {
         std::string clave = getClaveTexturaPersonaje(nombre);
         const float suelo = 720.f;
         posicion = {640.f, suelo};
         maximo = {330.f, 610.f};
 
-        if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
+        if (camara == TipoCamara::CAM_01_DULCERIA) {
             if (clave == "Gobo") {
                 posicion = {215.f, 680.f};
                 maximo = {155.f, 315.f};
@@ -295,7 +356,7 @@ private:
             return;
         }
 
-        if (camaraActual == TipoCamara::CAM_02_PASILLO_A) {
+        if (camara == TipoCamara::CAM_02_PASILLO_A) {
             if (clave == "Director") {
                 posicion = {665.f, 670.f};
                 maximo = {110.f, 210.f};
@@ -306,7 +367,7 @@ private:
             return;
         }
 
-        if (camaraActual == TipoCamara::CAM_03_PASILLO_B) {
+        if (camara == TipoCamara::CAM_03_PASILLO_B) {
             if (clave == "Popy") {
                 posicion = {760.f, 670.f};
                 maximo = {140.f, 230.f};
@@ -323,7 +384,7 @@ private:
             return;
         }
 
-        if (camaraActual == TipoCamara::CAM_04_SALAS) {
+        if (camara == TipoCamara::CAM_04_SALAS) {
             if (clave == "Gobo") {
                 posicion = {500.f, 670.f};
                 maximo = {130.f, 230.f};
@@ -340,7 +401,7 @@ private:
             return;
         }
 
-        if (camaraActual == TipoCamara::CAM_05_BANOS) {
+        if (camara == TipoCamara::CAM_05_BANOS) {
             if (clave == "Popy") {
                 posicion = {760.f, 675.f};
                 maximo = {132.f, 235.f};
@@ -476,7 +537,8 @@ public:
           generadorAleatorio(std::random_device{}()),
           distribucionEstadistica(0, 100),
           mapaCamarasCargado(false),
-          fuenteMapaCargada(false) {
+          fuenteMapaCargada(false),
+          relojAnimacionCamara() {
 
 
         cajaMapa.setSize(tamanoPantalla());
@@ -504,11 +566,20 @@ public:
     }
 
     void cambiarCamara(TipoCamara nuevaCamara) {
+        if (camaraActual == nuevaCamara) {
+            return;
+        }
+
         camaraActual = nuevaCamara;
+        relojAnimacionCamara.restart();
     }
 
     TipoCamara getCamaraActual() const {
         return camaraActual;
+    }
+
+    float getDesplazamientoHorizontalActual() const {
+        return obtenerDesplazamientoHorizontal(camaraActual);
     }
 
 
@@ -537,46 +608,16 @@ public:
 
 
     void renderizar(sf::RenderWindow& ventana) {
-        sf::Vector2f pantalla = tamanoPantalla();
-
-
-        if (texturasFondo.find(camaraActual) != texturasFondo.end()) {
-
-            sf::Sprite fondoSprite(texturasFondo.at(camaraActual));
-            fondoSprite.setPosition(sf::Vector2f(0.f, 0.f));
-
-            float escalaX = pantalla.x / texturasFondo.at(camaraActual).getSize().x;
-            float escalaY = pantalla.y / texturasFondo.at(camaraActual).getSize().y;
-            fondoSprite.setScale({escalaX, escalaY});
-            ventana.draw(fondoSprite);
-        } else {
-
-            sf::Color colorFondo = colorFondoFallback.count(camaraActual) > 0
-                ? colorFondoFallback.at(camaraActual)
-                : sf::Color(40, 60, 30);
-
-            sf::RectangleShape fondoMonitor(pantalla);
-            fondoMonitor.setFillColor(colorFondo);
-            fondoMonitor.setPosition(sf::Vector2f(0.f, 0.f));
-            ventana.draw(fondoMonitor);
-        }
-
-
-        for (float y = 0.0f; y < pantalla.y; y += 20.0f) {
-            sf::RectangleShape linea({pantalla.x, 1.0f});
-            linea.setPosition({0.0f, y});
-            linea.setFillColor(sf::Color(0, 80, 0, 120));
-            ventana.draw(linea);
-        }
+        renderizarBaseCamara(ventana, camaraActual, getDesplazamientoHorizontalActual());
 
         dibujarNavegacionCamaras(ventana);
     }
 
 private:
-    sf::Color obtenerColorFondo() const {
+    sf::Color obtenerColorFondo(TipoCamara camara) const {
 
-        if (colorFondoFallback.count(camaraActual) > 0) {
-            return colorFondoFallback.at(camaraActual);
+        if (colorFondoFallback.count(camara) > 0) {
+            return colorFondoFallback.at(camara);
         }
         return sf::Color(20, 40, 20);
     }
@@ -589,8 +630,12 @@ private:
 public:
 
     void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre) {
+        dibujarPersonaje(ventana, nombre, camaraActual, 0.0f);
+    }
+
+    void dibujarPersonaje(sf::RenderWindow& ventana, const std::string& nombre, TipoCamara camara, float offsetX = 0.0f) {
         if (!personajePermitido(nombre)) return;
-        if (!personajeVisibleEnCamara(nombre)) return;
+        if (!personajeVisibleEnCamara(camara, nombre)) return;
         auto textura = texturasPersonajes.find(getClaveTexturaPersonaje(nombre));
         sf::Texture texturaTemporal;
         const sf::Texture* texturaParaDibujar = nullptr;
@@ -616,7 +661,7 @@ public:
             std::string carpeta = getCarpetaPersonaje(nombre);
             if (!carpeta.empty()) {
 
-                if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
+                if (camara == TipoCamara::CAM_01_DULCERIA) {
                     std::vector<std::string> posibles = {
                         "assets/textures/camaras/dulceria/" + carpeta + ".png",
                         "assets/textures/camaras/dulceria/" + nombre + ".png",
@@ -650,7 +695,7 @@ public:
             sf::IntRect bbox = obtenerBoundingBoxAlpha(*texturaParaDibujar);
             sf::Vector2f posicion;
             sf::Vector2f maximo;
-            obtenerPlanoPersonaje(nombre, posicion, maximo);
+            obtenerPlanoPersonaje(camara, nombre, posicion, maximo);
             maximo *= 1.65f;
             float escalaX = maximo.x / static_cast<float>(bbox.size.x);
             float escalaY = maximo.y / static_cast<float>(bbox.size.y);
@@ -658,9 +703,13 @@ public:
 
             sprite.setScale({escala, escala});
             sprite.setOrigin({static_cast<float>(bbox.position.x) + bbox.size.x / 2.f, static_cast<float>(bbox.position.y + bbox.size.y)});
-            sprite.setPosition(posicion);
+            sprite.setPosition(posicion + sf::Vector2f(offsetX, 0.0f));
             ventana.draw(sprite);
         }
+    }
+
+    void obtenerPlanoPersonaje(const std::string& nombre, sf::Vector2f& posicion, sf::Vector2f& maximo) const {
+        obtenerPlanoPersonaje(camaraActual, nombre, posicion, maximo);
     }
 
 
