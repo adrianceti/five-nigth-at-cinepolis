@@ -196,9 +196,6 @@ private:
         if (nombre == "The Usher") {
             return "TheUsher";
         }
-        if (nombre == "Tickety Stub") {
-            return "TicketyStub";
-        }
         return nombre;
     }
 
@@ -208,27 +205,26 @@ private:
         if (clave == "Director") return "director";
         if (clave == "Popy") return "popy";
         if (clave == "TheUsher") return "theusher";
-        if (clave == "TicketyStub") return "ticketystub";
         return "";
     }
 
     bool personajePermitido(const std::string& nombre) const {
-        static const std::vector<std::string> permitidos = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
+        static const std::vector<std::string> permitidos = {"Gobo", "Director", "Popy", "TheUsher"};
         return std::find(permitidos.begin(), permitidos.end(), nombre) != permitidos.end();
     }
 
     bool personajeVisibleEnCamara(const std::string& nombre) const {
         if (camaraActual == TipoCamara::CAM_01_DULCERIA) {
-            return nombre == "Gobo" || nombre == "Director" || nombre == "TheUsher" || nombre == "TicketyStub";
+            return nombre == "Gobo" || nombre == "Director" || nombre == "TheUsher";
         }
         if (camaraActual == TipoCamara::CAM_02_PASILLO_A) {
-            return nombre == "Gobo" || nombre == "Popy" || nombre == "TicketyStub";
+            return nombre == "Gobo" || nombre == "Popy";
         }
         if (camaraActual == TipoCamara::CAM_03_PASILLO_B) {
             return nombre == "Director" || nombre == "TheUsher";
         }
         if (camaraActual == TipoCamara::CAM_04_SALAS) {
-            return nombre == "Gobo" || nombre == "Director" || nombre == "TheUsher" || nombre == "TicketyStub";
+            return nombre == "Gobo" || nombre == "Director" || nombre == "TheUsher";
         }
         if (camaraActual == TipoCamara::CAM_05_BANOS) {
             return nombre == "Popy" || nombre == "TheUsher";
@@ -295,18 +291,12 @@ private:
             } else if (clave == "TheUsher") {
                 posicion = {880.f, 610.f};
                 maximo = {98.f, 210.f};
-            } else if (clave == "TicketyStub") {
-                posicion = {1110.f, 660.f};
-                maximo = {110.f, 190.f};
             }
             return;
         }
 
         if (camaraActual == TipoCamara::CAM_02_PASILLO_A) {
-            if (clave == "TicketyStub") {
-                posicion = {520.f, 670.f};
-                maximo = {140.f, 200.f};
-            } else if (clave == "Director") {
+            if (clave == "Director") {
                 posicion = {665.f, 670.f};
                 maximo = {110.f, 210.f};
             } else {
@@ -435,8 +425,8 @@ private:
 
     void cargarTexturasPersonajes() {
 
-        std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
-        std::vector<std::string> carpetas = {"gobo", "director", "popy", "theusher", "ticketystub"};
+        std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher"};
+        std::vector<std::string> carpetas = {"gobo", "director", "popy", "theusher"};
 
         for (size_t i = 0; i < personajes.size(); i++) {
             std::string rutaPersonaje = "assets/textures/personajes/" + carpetas[i] + "/";
@@ -507,7 +497,7 @@ public:
         });
 
 
-        std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher", "TicketyStub"};
+        std::vector<std::string> personajes = {"Gobo", "Director", "Popy", "TheUsher"};
         for (const auto& p : personajes) {
             personajesPorCamara[p] = false;
         }
