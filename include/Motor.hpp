@@ -779,9 +779,20 @@ private:
         if (sonidoMenuPrincipal.has_value()) {
             sonidoMenuPrincipal->stop();
         }
+        jugador.resetear();
+        gobo.resetear();
+        director.resetear();
+        popy.resetear();
+        usher.resetear();
+        horaActual = 12;
+        acumuladorHora = 0.0f;
+        acumuladorTickIA = 0.0f;
+        introNoche1Reproducido = false;
+        introNoche1Activa = false;
         estadoJuego = EstadoJuego::Jugando;
         relojNoche.restart();
         relojEnergia.restart();
+        relojIntroNoche1.restart();
         controlesBloqueados = false;
     }
 
@@ -815,7 +826,7 @@ private:
             }
 
             if (estadoJuego == EstadoJuego::MenuPrincipal) {
-                if (const auto* click = evento->getIf<sf::Event::MouseButtonReleased>()) {
+                if (const auto* click = evento->getIf<sf::Event::MouseButtonPressed>()) {
                     if (click->button == sf::Mouse::Button::Left) {
                         iniciarPartidaDesdeMenu();
                     }
@@ -907,6 +918,15 @@ private:
     void actualizar() {
 
         if (estadoJuego == EstadoJuego::MenuPrincipal) {
+            sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
+            bool mouseDentro = posicionMouse.x >= 0 &&
+                               posicionMouse.x < static_cast<int>(ventana.getSize().x) &&
+                               posicionMouse.y >= 0 &&
+                               posicionMouse.y < static_cast<int>(ventana.getSize().y);
+            if (mouseDentro && sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+                iniciarPartidaDesdeMenu();
+                return;
+            }
             if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
                 sonidoMenuPrincipal->play();
             }
@@ -1652,6 +1672,7 @@ public:
 
         ventana.create(sf::VideoMode({1280, 720}), "Five Nights at Cinepolis - Oficina");
         ventana.setFramerateLimit(60);
+        ventana.requestFocus();
 
 
         posicionCamaraX = anchoVirtualOficina / 2.0f;
