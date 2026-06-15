@@ -403,8 +403,8 @@ private:
 
         if (camara == TipoCamara::CAM_05_BANOS) {
             if (clave == "Popy") {
-                posicion = {760.f, 675.f};
-                maximo = {132.f, 235.f};
+                posicion = {310.f, suelo};
+                maximo = {195.f, 345.f};
             } else if (clave == "TheUsher") {
                 posicion = {520.f, 650.f};
                 maximo = {100.f, 200.f};
