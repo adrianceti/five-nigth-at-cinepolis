@@ -2128,25 +2128,6 @@ private:
                 monitor.getCamaraActual(),
                 monitor.getDesplazamientoHorizontalActual());
 
-            if (fuenteUICargada) {
-                monitor.dibujarRutaPersonaje(
-                    ventana, fuenteUI, "Gobo",
-                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_02_PASILLO_A},
-                    gobo.getPosicionActual(), gobo.esEnLaPuerta(), 0);
-                monitor.dibujarRutaPersonaje(
-                    ventana, fuenteUI, "Director",
-                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_03_PASILLO_B},
-                    director.getPosicionActual(), director.esEnLaPuerta(), 1);
-                monitor.dibujarRutaPersonaje(
-                    ventana, fuenteUI, "Popy",
-                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_03_PASILLO_B},
-                    popy.getPosicionActual(), popy.esEnLaPuerta(), 2);
-                monitor.dibujarRutaPersonaje(
-                    ventana, fuenteUI, "The Usher",
-                    {TipoCamara::CAM_01_DULCERIA, TipoCamara::CAM_04_SALAS, TipoCamara::CAM_05_BANOS, TipoCamara::CAM_03_PASILLO_B},
-                    usher.getPosicionActual(), usher.esEnLaPuerta(), 3);
-            }
-
             if (interferenciaMonitorActiva) {
                 dibujarInterferenciaMonitor();
             }
