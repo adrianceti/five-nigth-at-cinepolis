@@ -1,4 +1,7 @@
 
 # Build outputs
-/bin/
 /obj/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store

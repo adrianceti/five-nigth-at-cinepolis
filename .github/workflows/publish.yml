@@ -1,0 +1,33 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required project structure
+        run: |
+          test -d video
+          test -d gallery
+          test -d screenshots
+          test -d bin
+          test -d assets
+          test -d include
+          test -d src
+          test -f video/demo.mp4
+          test -f gallery/cover.png
+          test -f screenshots/screenshot1.png
+          test -f screenshots/screenshot2.png
+          test -f screenshots/screenshot3.png
+          test -f bin/JuegoProyecto.exe
+          test -f README.md
+          test -f .gitignore
+          test -f makefile
