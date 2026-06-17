@@ -909,48 +909,43 @@ private:
         return nombre;
     }
 
-    bool clicEnJugar(sf::Vector2i posicionClick) const {
+    int obtenerBotonMenuEn(sf::Vector2i posicionPixel) const {
         if (!spriteMenuPrincipal.has_value()) {
-            return false;
+            return -1;
         }
 
-        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
+        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionPixel, vistaInterfaz);
         sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
-        sf::FloatRect botonJugar({40.0f, 355.0f}, {475.0f, 105.0f});
-        return botonJugar.contains(posicionTextura);
+        const std::vector<sf::FloatRect> botones = {
+            {{40.0f, 355.0f}, {475.0f, 105.0f}},
+            {{40.0f, 470.0f}, {475.0f, 70.0f}},
+            {{40.0f, 550.0f}, {475.0f, 70.0f}},
+            {{40.0f, 630.0f}, {475.0f, 70.0f}}
+        };
+
+        for (size_t i = 0; i < botones.size(); ++i) {
+            if (botones[i].contains(posicionTextura)) {
+                return static_cast<int>(i);
+            }
+        }
+
+        return -1;
+    }
+
+    bool clicEnJugar(sf::Vector2i posicionClick) const {
+        return obtenerBotonMenuEn(posicionClick) == 0;
     }
 
     bool clicEnCreditos(sf::Vector2i posicionClick) const {
-        if (!spriteMenuPrincipal.has_value()) {
-            return false;
-        }
-
-        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
-        sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
-        sf::FloatRect botonCreditos({40.0f, 550.0f}, {475.0f, 70.0f});
-        return botonCreditos.contains(posicionTextura);
+        return obtenerBotonMenuEn(posicionClick) == 2;
     }
 
     bool clicEnInstrucciones(sf::Vector2i posicionClick) const {
-        if (!spriteMenuPrincipal.has_value()) {
-            return false;
-        }
-
-        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
-        sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
-        sf::FloatRect botonInstrucciones({40.0f, 470.0f}, {475.0f, 70.0f});
-        return botonInstrucciones.contains(posicionTextura);
+        return obtenerBotonMenuEn(posicionClick) == 1;
     }
 
     bool clicEnSalirMenu(sf::Vector2i posicionClick) const {
-        if (!spriteMenuPrincipal.has_value()) {
-            return false;
-        }
-
-        sf::Vector2f posicionInterfaz = ventana.mapPixelToCoords(posicionClick, vistaInterfaz);
-        sf::Vector2f posicionTextura = spriteMenuPrincipal->getInverseTransform().transformPoint(posicionInterfaz);
-        sf::FloatRect botonSalir({40.0f, 630.0f}, {475.0f, 70.0f});
-        return botonSalir.contains(posicionTextura);
+        return obtenerBotonMenuEn(posicionClick) == 3;
     }
 
     void dibujarBotonesAdicionalesMenu() {
@@ -965,13 +960,17 @@ private:
             sf::Color(1, 2, 3, 245)
         );
 
+        const int botonActivo = obtenerBotonMenuEn(sf::Mouse::getPosition(ventana));
         const std::vector<std::pair<std::string, sf::FloatRect>> botones = {
+            {"JUGAR", {{40.0f, 355.0f}, {475.0f, 105.0f}}},
             {"INSTRUCCIONES", {{40.0f, 470.0f}, {475.0f, 70.0f}}},
             {"CREDITOS", {{40.0f, 550.0f}, {475.0f, 70.0f}}},
             {"SALIR", {{40.0f, 630.0f}, {475.0f, 70.0f}}}
         };
 
-        for (const auto& boton : botones) {
+        for (size_t i = 0; i < botones.size(); ++i) {
+            const auto& boton = botones[i];
+            const bool activo = static_cast<int>(i) == botonActivo;
             sf::Vector2f inicio = transformacion.transformPoint(boton.second.position);
             sf::Vector2f final = transformacion.transformPoint({
                 boton.second.position.x + boton.second.size.x,
@@ -979,27 +978,40 @@ private:
             });
             sf::RectangleShape forma(final - inicio);
             forma.setPosition(inicio);
-            forma.setFillColor(sf::Color(5, 7, 7, 225));
-            forma.setOutlineColor(sf::Color(108, 112, 105, 215));
-            forma.setOutlineThickness(2.0f);
+            forma.setFillColor(activo ? sf::Color(12, 58, 15, 205) : sf::Color(2, 3, 3, 210));
+            forma.setOutlineColor(activo ? sf::Color(103, 255, 65, 245) : sf::Color(92, 94, 88, 210));
+            forma.setOutlineThickness(activo ? 3.0f : 2.0f);
             ventana.draw(forma);
 
             if (fuenteUICargada) {
-                sf::Text texto(fuenteUI, boton.first, 27);
+                sf::Text texto(fuenteUI, boton.first, i == 0 ? 38 : 27);
                 texto.setStyle(sf::Text::Bold);
-                texto.setFillColor(sf::Color(205, 202, 188));
+                texto.setFillColor(activo ? sf::Color(142, 255, 100) : sf::Color(205, 202, 188));
                 texto.setOutlineColor(sf::Color::Black);
-                texto.setOutlineThickness(2.0f);
+                texto.setOutlineThickness(activo ? 3.0f : 2.0f);
                 sf::FloatRect limites = texto.getLocalBounds();
                 texto.setOrigin({
                     limites.position.x + limites.size.x / 2.0f,
                     limites.position.y + limites.size.y / 2.0f
                 });
                 texto.setPosition({
-                    inicio.x + (final.x - inicio.x) / 2.0f,
+                    inicio.x + (final.x - inicio.x) * (i == 0 ? 0.43f : 0.5f),
                     inicio.y + (final.y - inicio.y) / 2.0f
                 });
                 ventana.draw(texto);
+
+                if (i == 0) {
+                    sf::CircleShape icono(19.0f, 3);
+                    icono.setFillColor(activo ? sf::Color(120, 255, 85) : sf::Color(190, 190, 178));
+                    icono.setOutlineColor(sf::Color::Black);
+                    icono.setOutlineThickness(2.0f);
+                    icono.setRotation(sf::degrees(90.0f));
+                    icono.setPosition({
+                        inicio.x + 72.0f,
+                        inicio.y + (final.y - inicio.y) / 2.0f - 19.0f
+                    });
+                    ventana.draw(icono);
+                }
             }
         }
     }
