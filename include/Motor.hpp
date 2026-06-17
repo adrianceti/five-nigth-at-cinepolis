@@ -205,6 +205,31 @@ private:
         };
     }
 
+    void actualizarVistaOficinaPorMouse(float dt) {
+        sf::Vector2u tamanoVentana = ventana.getSize();
+        if (tamanoVentana.x == 0 || tamanoVentana.y == 0) return;
+
+        sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
+        if (posicionMouse.x < 0 ||
+            posicionMouse.x > static_cast<int>(tamanoVentana.x) ||
+            posicionMouse.y < 0 ||
+            posicionMouse.y > static_cast<int>(tamanoVentana.y)) {
+            return;
+        }
+
+        const float limiteIzquierdo = static_cast<float>(tamanoVentana.x) * (280.0f / 1280.0f);
+        const float limiteDerecho = static_cast<float>(tamanoVentana.x) * (1000.0f / 1280.0f);
+
+        if (static_cast<float>(posicionMouse.x) > limiteDerecho) {
+            posicionCamaraX += velocidadCamara * dt;
+        } else if (static_cast<float>(posicionMouse.x) < limiteIzquierdo) {
+            posicionCamaraX -= velocidadCamara * dt;
+        }
+
+        posicionCamaraX = std::clamp(posicionCamaraX, 640.0f, anchoVirtualOficina - 640.0f);
+        vistaOficina.setCenter({posicionCamaraX, 360.0f});
+    }
+
     void ajustarZonaPuertaFisica(sf::RectangleShape& zonaPuerta, bool esIzquierda) {
         sf::IntRect recorte = obtenerRecortePuertaOficina(esIzquierda);
         sf::Vector2f escalaOficina = obtenerEscalaOficina();
@@ -1580,17 +1605,7 @@ private:
             }
 
             if (!jugador.esMonitorAbierto()) {
-                sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
-
-                if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
-                    if (posicionMouse.x > 1000) posicionCamaraX += velocidadCamara * dt;
-                    else if (posicionMouse.x < 280) posicionCamaraX -= velocidadCamara * dt;
-
-                    if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
-                    if (posicionCamaraX > (anchoVirtualOficina - 640.0f)) posicionCamaraX = anchoVirtualOficina - 640.0f;
-
-                    vistaOficina.setCenter({posicionCamaraX, 360.0f});
-                }
+                actualizarVistaOficinaPorMouse(dt);
             }
             return;
         }
@@ -1732,18 +1747,7 @@ private:
 
 
         if (!jugador.esMonitorAbierto()) {
-            sf::Vector2i posicionMouse = sf::Mouse::getPosition(ventana);
-
-            if (posicionMouse.x >= 0 && posicionMouse.x <= 1280 && posicionMouse.y >= 0 && posicionMouse.y <= 720) {
-                if (posicionMouse.x > 1000) posicionCamaraX += velocidadCamara * dt;
-                else if (posicionMouse.x < 280) posicionCamaraX -= velocidadCamara * dt;
-
-
-                if (posicionCamaraX < 640.0f) posicionCamaraX = 640.0f;
-                if (posicionCamaraX > (anchoVirtualOficina - 640.0f)) posicionCamaraX = anchoVirtualOficina - 640.0f;
-
-                vistaOficina.setCenter({posicionCamaraX, 360.0f});
-            }
+            actualizarVistaOficinaPorMouse(dt);
         }
 
         if (relojTerminal.getElapsedTime().asSeconds() >= 1.0f) {
