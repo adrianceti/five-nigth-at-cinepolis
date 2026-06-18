@@ -17,7 +17,7 @@ OBJECTS = $(OBJ_DIR)/Main.o
 DEPS = $(OBJECTS:.o=.d)
 
 # Nombre del ejecutable
-EXECUTABLE = $(BIN_DIR)/JuegoProyecto.exe
+EXECUTABLE = $(BIN_DIR)/FiveNightsAtCinepolis.exe
 
 # Targets principales
 .PHONY: all build clean run help
@@ -46,12 +46,13 @@ clean:
 	@echo "[CLEAN] Eliminando archivos compilados..."
 	@rm -rf $(OBJ_DIR)
 	@rm -f $(EXECUTABLE)
+	@rm -f $(BIN_DIR)/JuegoProyecto.exe
 	@echo "[SUCCESS] Limpieza completada"
 
 # Ejecutar el programa en terminal externa
 run: build
 	@echo "[RUN] Iniciando aplicacion..."
-	@cd $(BIN_DIR) && start JuegoProyecto.exe
+	@cd $(BIN_DIR) && start FiveNightsAtCinepolis.exe
 
 # Recompilar desde cero
 rebuild: clean build

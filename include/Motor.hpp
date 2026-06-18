@@ -21,7 +21,6 @@ enum class EstadoJuego {
     MenuPrincipal,
     TransicionSala3,
     Instrucciones,
-    Creditos,
     Jugando,
     Pausa,
     AtaquePendiente,
@@ -44,8 +43,6 @@ private:
     std::optional<sf::Sprite> spritePortada;
     sf::Texture texturaMenuPrincipal;
     std::optional<sf::Sprite> spriteMenuPrincipal;
-    sf::Texture texturaCreditos;
-    std::optional<sf::Sprite> spriteCreditos;
     sf::Texture texturaMenuPausa;
     std::optional<sf::Sprite> spriteMenuPausa;
     sf::Font fuenteUI;
@@ -919,8 +916,7 @@ private:
         const std::vector<sf::FloatRect> botones = {
             {{40.0f, 355.0f}, {475.0f, 105.0f}},
             {{40.0f, 470.0f}, {475.0f, 70.0f}},
-            {{40.0f, 550.0f}, {475.0f, 70.0f}},
-            {{40.0f, 630.0f}, {475.0f, 70.0f}}
+            {{40.0f, 550.0f}, {475.0f, 70.0f}}
         };
 
         for (size_t i = 0; i < botones.size(); ++i) {
@@ -936,16 +932,12 @@ private:
         return obtenerBotonMenuEn(posicionClick) == 0;
     }
 
-    bool clicEnCreditos(sf::Vector2i posicionClick) const {
-        return obtenerBotonMenuEn(posicionClick) == 2;
-    }
-
     bool clicEnInstrucciones(sf::Vector2i posicionClick) const {
         return obtenerBotonMenuEn(posicionClick) == 1;
     }
 
     bool clicEnSalirMenu(sf::Vector2i posicionClick) const {
-        return obtenerBotonMenuEn(posicionClick) == 3;
+        return obtenerBotonMenuEn(posicionClick) == 2;
     }
 
     void dibujarBotonesAdicionalesMenu() {
@@ -964,8 +956,7 @@ private:
         const std::vector<std::pair<std::string, sf::FloatRect>> botones = {
             {"JUGAR", {{40.0f, 355.0f}, {475.0f, 105.0f}}},
             {"INSTRUCCIONES", {{40.0f, 470.0f}, {475.0f, 70.0f}}},
-            {"CREDITOS", {{40.0f, 550.0f}, {475.0f, 70.0f}}},
-            {"SALIR", {{40.0f, 630.0f}, {475.0f, 70.0f}}}
+            {"SALIR", {{40.0f, 550.0f}, {475.0f, 70.0f}}}
         };
 
         for (size_t i = 0; i < botones.size(); ++i) {
@@ -1411,11 +1402,6 @@ private:
                             sonidoMenuPrincipal->stop();
                         }
                         estadoJuego = EstadoJuego::Instrucciones;
-                    } else if (click->button == sf::Mouse::Button::Left && clicEnCreditos(click->position)) {
-                        if (sonidoMenuPrincipal.has_value()) {
-                            sonidoMenuPrincipal->stop();
-                        }
-                        estadoJuego = EstadoJuego::Creditos;
                     } else if (click->button == sf::Mouse::Button::Left && clicEnSalirMenu(click->position)) {
                         ventana.close();
                     }
@@ -1433,15 +1419,6 @@ private:
             }
 
             if (estadoJuego == EstadoJuego::Instrucciones) {
-                if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
-                    if (tecla->code == sf::Keyboard::Key::Escape) {
-                        estadoJuego = EstadoJuego::MenuPrincipal;
-                    }
-                }
-                continue;
-            }
-
-            if (estadoJuego == EstadoJuego::Creditos) {
                 if (const auto* tecla = evento->getIf<sf::Event::KeyPressed>()) {
                     if (tecla->code == sf::Keyboard::Key::Escape) {
                         estadoJuego = EstadoJuego::MenuPrincipal;
@@ -1561,13 +1538,6 @@ private:
             estadoJuego == EstadoJuego::MenuPrincipal) {
             if (sonidoMenuPrincipal.has_value() && sonidoMenuPrincipal->getStatus() == sf::SoundSource::Status::Stopped) {
                 sonidoMenuPrincipal->play();
-            }
-            return;
-        }
-
-        if (estadoJuego == EstadoJuego::Creditos) {
-            if (sonidoMenuPrincipal.has_value()) {
-                sonidoMenuPrincipal->stop();
             }
             return;
         }
@@ -2050,16 +2020,6 @@ private:
             return;
         }
 
-        if (estadoJuego == EstadoJuego::Creditos) {
-            ventana.clear(sf::Color::Black);
-            ventana.setView(vistaInterfaz);
-            if (spriteCreditos.has_value()) {
-                ventana.draw(spriteCreditos.value());
-            }
-            ventana.display();
-            return;
-        }
-
         if (estadoJuego == EstadoJuego::Victoria) {
             renderizarVictoria();
             return;
@@ -2440,25 +2400,6 @@ public:
             float escala = std::max(escalaX, escalaY);
             spriteMenuPrincipal->setScale({escala, escala});
             spriteMenuPrincipal->setPosition({
-                (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
-                (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
-            });
-        }
-
-        if (!cargarTextureDesdeRutas(texturaCreditos, {
-            "assets/textures/menuprincipal/creditos.png",
-            "../assets/textures/menuprincipal/creditos.png"
-        })) {
-            std::cerr << "Advertencia: No se encontró textura de créditos" << std::endl;
-        } else {
-            spriteCreditos.emplace(texturaCreditos);
-
-            const auto tamTextura = texturaCreditos.getSize();
-            float escalaX = 1280.0f / static_cast<float>(tamTextura.x);
-            float escalaY = 720.0f / static_cast<float>(tamTextura.y);
-            float escala = std::max(escalaX, escalaY);
-            spriteCreditos->setScale({escala, escala});
-            spriteCreditos->setPosition({
                 (1280.0f - static_cast<float>(tamTextura.x) * escala) / 2.0f,
                 (720.0f - static_cast<float>(tamTextura.y) * escala) / 2.0f
             });

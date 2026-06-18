@@ -16,7 +16,7 @@ Sobrevive la noche completa, desde las 12 AM hasta las 6 AM, evitando que Gobo, 
 - E: encender o apagar la luz derecha.
 - Barra espaciadora: abrir o cerrar el monitor de camaras.
 - 1-5: cambiar entre camaras cuando el monitor esta abierto.
-- Esc: pausar el juego o regresar desde instrucciones/creditos.
+- Esc: pausar el juego o regresar desde instrucciones.
 - R: reiniciar despues de un Game Over.
 - Enter o Space: iniciar partida desde el menu.
 
@@ -30,7 +30,7 @@ El juego combina administracion de recursos con vigilancia en tiempo real. Cada 
 - Cuatro amenazas con rutas y comportamientos diferentes.
 - Energia limitada con HUD de consumo y reloj de la noche.
 - Puertas, luces, sonidos direccionales, interferencia de monitor y jumpscares.
-- Menu principal, instrucciones, creditos, pausa, Game Over y victoria.
+- Menu principal, instrucciones, pausa, Game Over y victoria.
 
 ### Equipo
 
@@ -46,9 +46,9 @@ El juego combina administracion de recursos con vigilancia en tiempo real. Cada 
 
 ### Creditos
 
-- Inspirado en la formula de supervivencia nocturna con camaras y administracion de energia.
-- Assets visuales y de audio incluidos en la carpeta `assets/`.
-- Material de demostracion incluido en `screenshots/`, `gallery/` y `video/`.
+- Assets de terceros utilizados: recursos visuales y de audio incluidos en la carpeta `assets/`. 
+- Referencias o inspiraciones: juegos de supervivencia nocturna con camaras, administracion de energia y amenazas progresivas.  
+- Agradecimientos: gracias por jugar y apoyar Five Nights at Cinepolis: The Midnight Show. Desarrollo, diseno, arte y programacion por Juan De Dios Ahumada Velazquez y Adrian Avila Toribio. 
 
 ## Diagrama UML
 
@@ -61,7 +61,6 @@ enum EstadoJuego {
     MenuPrincipal
     TransicionSala3
     Instrucciones
-    Creditos
     Jugando
     Pausa
     AtaquePendiente
